@@ -28,7 +28,7 @@ import {
   Bookmark,
 } from "lucide-react";
 
-type SidebarView = "sessions" | "sources" | "settings";
+type SidebarView = "sessions" | "sources" | "settings" | "bookmarks" | "supabase";
 
 interface DashboardProps {
   apiKey: string;
@@ -194,20 +194,17 @@ export function Dashboard({
                 onClick={() => setActiveView("bookmarks")}
               />
             )}
+            {/* Supabase Management */}
+            <NavItem
+              icon={<Database className="h-5 w-5" />}
+              label="Supabase Projects"
+              active={activeView === "supabase"}
+              onClick={() => setActiveView("supabase")}
+            />
           </div>
 
           {/* Bottom Icons */}
           <div className="flex flex-col items-center gap-1">
-            {/* Supabase indicator */}
-            {getSupabaseClient() && (
-              <NavItem
-                icon={<Database className="h-5 w-5" />}
-                label={supabaseUser ? "Supabase Connected" : "Supabase (no auth)"}
-                active={false}
-                onClick={() => {}}
-                indicator={supabaseUser ? "green" : "yellow"}
-              />
-            )}
             <NavItem
               icon={<Settings className="h-5 w-5" />}
               label="Settings"

@@ -7,7 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import { getSupabaseClient } from "@/lib/supabase-client";
+import { getSupabaseClient, getSupabaseAccessToken, clearSupabaseAccessToken, saveSupabaseAccessToken } from "@/lib/supabase-client";
+import { verifyAccessToken } from "@/lib/supabase-management";
+import { SupabaseProjects } from "@/components/supabase-projects";
 import type { SavedSession } from "@/lib/supabase-data";
 import type { User } from "@supabase/supabase-js";
 import {
@@ -37,10 +39,12 @@ import {
   Trash2,
   User as UserIcon,
   Shield,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
-type SidebarView = "sessions" | "sources" | "settings" | "bookmarks";
+type SidebarView = "sessions" | "sources" | "settings" | "bookmarks" | "supabase";
 
 interface SidebarProps {
   sources: JulesSource[];
@@ -282,6 +286,9 @@ export function Sidebar({
             savedSessions={savedSessions}
             onSelectSession={onSelectSession}
           />
+        )}
+        {activeView === "supabase" && (
+          <SupabaseProjects />
         )}
         {activeView === "settings" && (
           <SettingsView
@@ -993,6 +1000,11 @@ function SettingsView({
 
         <Separator className="bg-[rgba(255,255,255,0.04)]" />
 
+        {/* Supabase Management API */}
+        <SupabaseManagementSection />
+
+        <Separator className="bg-[rgba(255,255,255,0.04)]" />
+
         {/* Disconnect Jules */}
         <button
           onClick={onDisconnect}
@@ -1002,6 +1014,119 @@ function SettingsView({
           <span className="text-sm">Disconnect Jules</span>
         </button>
       </div>
+    </div>
+  );
+}
+
+/* Supabase Management API section for Settings */
+function SupabaseManagementSection() {
+  const [patInput, setPatInput] = useState("");
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectError, setConnectError] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+
+  useEffect(() => {
+    const existing = getSupabaseAccessToken();
+    if (existing) setIsConnected(true);
+  }, []);
+
+  const handleConnect = async () => {
+    if (!patInput.trim()) {
+      setConnectError("Please enter your access token");
+      return;
+    }
+    setIsConnecting(true);
+    setConnectError(null);
+    try {
+      const valid = await verifyAccessToken(patInput.trim());
+      if (!valid) {
+        setConnectError("Invalid access token");
+        return;
+      }
+      saveSupabaseAccessToken(patInput.trim());
+      setIsConnected(true);
+      setPatInput("");
+    } catch (err) {
+      setConnectError(err instanceof Error ? err.message : "Failed to verify token");
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handleDisconnect = () => {
+    clearSupabaseAccessToken();
+    setIsConnected(false);
+    setPatInput("");
+    setConnectError(null);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Database className="h-4 w-4 text-[#10b981]" />
+        <h4 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">Mgmt API</h4>
+      </div>
+
+      {isConnected ? (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-[rgba(16,185,129,0.04)] border border-[rgba(16,185,129,0.08)]">
+            <div className="h-2 w-2 rounded-full bg-[#10b981]" />
+            <span className="text-[10px] text-[#10b981] font-medium">Management API connected</span>
+          </div>
+          <button
+            onClick={handleDisconnect}
+            className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] text-[#64748b] hover:text-[#ef4444] hover:bg-[rgba(239,68,68,0.04)] transition-colors"
+          >
+            <Unplug className="h-3.5 w-3.5" />
+            Disconnect Management API
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-[10px] text-[#64748b] leading-relaxed">
+            Add a Personal Access Token to manage Supabase projects, organizations, and more.
+          </p>
+          <Input
+            type="password"
+            placeholder="sbp_xxxxxxxxxxxxxxxxxxxx"
+            value={patInput}
+            onChange={(e) => { setPatInput(e.target.value); setConnectError(null); }}
+            disabled={isConnecting}
+            className="bg-[#0d1117] border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(16,185,129,0.3)] h-9 rounded-lg text-xs font-mono"
+          />
+          <Button
+            onClick={handleConnect}
+            disabled={isConnecting || !patInput.trim()}
+            className="w-full bg-gradient-to-r from-[#10b981] to-[#059669] hover:brightness-110 text-white h-8 rounded-lg font-medium text-xs transition-all duration-200 gap-1.5 disabled:opacity-50"
+          >
+            {isConnecting ? (
+              <>
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Verifying...
+              </>
+            ) : (
+              <>
+                <Link2 className="h-3 w-3" />
+                Connect
+              </>
+            )}
+          </Button>
+          {connectError && (
+            <div className="rounded-lg bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.15)] px-2.5 py-1.5 text-[10px] text-[#f87171]">
+              {connectError}
+            </div>
+          )}
+          <a
+            href="https://supabase.com/dashboard/account/tokens"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-[9px] text-[#10b981] hover:text-[#059669] transition-colors"
+          >
+            Generate a token on Supabase
+            <ExternalLink className="h-2.5 w-2.5" />
+          </a>
+        </div>
+      )}
     </div>
   );
 }

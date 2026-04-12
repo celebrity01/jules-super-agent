@@ -55,3 +55,19 @@ export function requireSupabase(): SupabaseClient {
   if (!client) throw new Error("Supabase not configured");
   return client;
 }
+
+// ===== Management API Access Token =====
+const SUPABASE_ACCESS_TOKEN_KEY = "supabase-access-token";
+
+export function getSupabaseAccessToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(SUPABASE_ACCESS_TOKEN_KEY);
+}
+
+export function saveSupabaseAccessToken(token: string): void {
+  localStorage.setItem(SUPABASE_ACCESS_TOKEN_KEY, token);
+}
+
+export function clearSupabaseAccessToken(): void {
+  localStorage.removeItem(SUPABASE_ACCESS_TOKEN_KEY);
+}
