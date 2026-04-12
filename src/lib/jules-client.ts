@@ -201,3 +201,72 @@ export async function sendMessage(
   }
   return res.json();
 }
+
+// ===== GitHub API types and helpers =====
+
+export interface GitHubUser {
+  login: string;
+  avatar_url: string;
+  name?: string;
+}
+
+export interface GitHubRepo {
+  id: number;
+  name: string;
+  full_name: string;
+  description?: string;
+  private: boolean;
+  html_url: string;
+}
+
+const githubHeaders = (token: string) => ({
+  "X-GitHub-Token": token,
+  "Content-Type": "application/json",
+});
+
+export async function getGitHubUser(token: string): Promise<GitHubUser> {
+  const res = await fetch("/api/github/user", {
+    headers: githubHeaders(token),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Request failed" }));
+    throw new Error(err.error || `Failed to fetch GitHub user (${res.status})`);
+  }
+  return res.json();
+}
+
+export async function getGitHubRepos(token: string): Promise<GitHubRepo[]> {
+  const res = await fetch("/api/github/repos", {
+    headers: githubHeaders(token),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Request failed" }));
+    throw new Error(
+      err.error || `Failed to fetch GitHub repos (${res.status})`
+    );
+  }
+  return res.json();
+}
+
+export async function createGitHubRepo(
+  token: string,
+  data: {
+    name: string;
+    description?: string;
+    private?: boolean;
+    auto_init?: boolean;
+  }
+): Promise<GitHubRepo> {
+  const res = await fetch("/api/github/create-repo", {
+    method: "POST",
+    headers: githubHeaders(token),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Request failed" }));
+    throw new Error(
+      err.error || `Failed to create GitHub repo (${res.status})`
+    );
+  }
+  return res.json();
+}

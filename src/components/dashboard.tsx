@@ -5,6 +5,7 @@ import { JulesSource, JulesSession, listSources, listSessions } from "@/lib/jule
 import { Sidebar } from "@/components/sidebar";
 import { SessionDetail } from "@/components/session-detail";
 import { NewSessionDialog } from "@/components/new-session-dialog";
+import { AddRepoDialog } from "@/components/add-repo-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -16,6 +17,8 @@ import {
 } from "lucide-react";
 
 type SidebarView = "sessions" | "sources" | "settings";
+
+const GITHUB_TOKEN_KEY = "github-token";
 
 interface DashboardProps {
   apiKey: string;
@@ -29,9 +32,29 @@ export function Dashboard({ apiKey, onDisconnect }: DashboardProps) {
   const [isLoadingSessions, setIsLoadingSessions] = useState(true);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [isNewSessionOpen, setIsNewSessionOpen] = useState(false);
+  const [showAddRepoDialog, setShowAddRepoDialog] = useState(false);
   const [activeView, setActiveView] = useState<SidebarView>("sessions");
+  const [githubToken, setGithubToken] = useState<string | null>(null);
 
   const maskedKey = `••••••••${apiKey.slice(-4)}`;
+
+  // Load GitHub token from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem(GITHUB_TOKEN_KEY);
+    if (stored) {
+      setGithubToken(stored);
+    }
+  }, []);
+
+  const handleGithubTokenChange = useCallback((token: string | null) => {
+    if (token) {
+      localStorage.setItem(GITHUB_TOKEN_KEY, token);
+      setGithubToken(token);
+    } else {
+      localStorage.removeItem(GITHUB_TOKEN_KEY);
+      setGithubToken(null);
+    }
+  }, []);
 
   const fetchSources = useCallback(async () => {
     setIsLoadingSources(true);
@@ -70,6 +93,10 @@ export function Dashboard({ apiKey, onDisconnect }: DashboardProps) {
   const handleSessionCreated = (sessionId: string) => {
     setSelectedSessionId(sessionId);
     fetchSessions();
+  };
+
+  const handleRepoCreated = () => {
+    fetchSources();
   };
 
   return (
@@ -125,6 +152,9 @@ export function Dashboard({ apiKey, onDisconnect }: DashboardProps) {
           maskedKey={maskedKey}
           activeView={activeView}
           onViewChange={setActiveView}
+          githubToken={githubToken}
+          onGitHubTokenChange={handleGithubTokenChange}
+          onOpenAddRepo={() => setShowAddRepoDialog(true)}
         />
 
         {/* Column 3: Main Agent View */}
@@ -183,6 +213,14 @@ export function Dashboard({ apiKey, onDisconnect }: DashboardProps) {
         sources={sources}
         apiKey={apiKey}
         onSessionCreated={handleSessionCreated}
+      />
+
+      {/* Add Repository Dialog */}
+      <AddRepoDialog
+        open={showAddRepoDialog}
+        onOpenChange={setShowAddRepoDialog}
+        githubToken={githubToken || ""}
+        onRepoCreated={handleRepoCreated}
       />
     </div>
   );

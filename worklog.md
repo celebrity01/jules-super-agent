@@ -45,3 +45,52 @@ Stage Summary:
 - Source names now correctly display as `owner/repo` using the `githubRepo` field from the API
 - All API functionality preserved (sources, sessions, activities, approve plan, send message)
 - Zero lint errors, dev server running successfully
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: Add GitHub Repository Creation Feature to Jules Super Agent
+
+Work Log:
+- Read and analyzed all existing source files to understand patterns and styling conventions
+- Created 3 GitHub API proxy route files following the same pattern as existing Jules API routes:
+  - `src/app/api/github/user/route.ts` — GET endpoint that proxies to GitHub API `/user` with Bearer token
+  - `src/app/api/github/repos/route.ts` — GET endpoint that proxies to GitHub API `/user/repos` with sort=updated, per_page=30, type=owner
+  - `src/app/api/github/create-repo/route.ts` — POST endpoint that proxies to GitHub API `/user/repos` with repo creation payload
+  - All routes return 401 if no X-GitHub-Token header, forward GitHub API errors, return 500 on internal failure
+- Extended `src/lib/jules-client.ts` with GitHub types and helpers (appended, no existing exports removed):
+  - `GitHubUser` interface (login, avatar_url, name)
+  - `GitHubRepo` interface (id, name, full_name, description, private, html_url)
+  - `githubHeaders()` helper for X-GitHub-Token header
+  - `getGitHubUser()` — fetches authenticated user info
+  - `getGitHubRepos()` — lists user's GitHub repos
+  - `createGitHubRepo()` — creates a new GitHub repository
+- Created `src/components/add-repo-dialog.tsx` — dark-themed dialog with two tabs:
+  - "Create New Repo" tab: repo name input, description textarea, Public/Private toggle cards, README init switch, gradient Create button, loading spinner, success state with green checkmark + repo URL + Jules App install note
+  - "Connect Existing Repo" tab: info about Jules GitHub App, link to install, Refresh Sources button
+  - Matches existing glassmorphism styling (bg-[#0c0c14], gradient-text, input-glow, bg-gradient-agent)
+- Updated `src/components/dashboard.tsx`:
+  - Added `githubToken` state managed via localStorage key "github-token"
+  - Added `showAddRepoDialog` state
+  - Added `handleGithubTokenChange` callback for token connect/disconnect
+  - Passes `githubToken`, `onGitHubTokenChange`, `onOpenAddRepo` props to Sidebar
+  - Renders `AddRepoDialog` component alongside existing `NewSessionDialog`
+- Updated `src/components/sidebar.tsx`:
+  - Extended `SidebarProps` with `githubToken`, `onGitHubTokenChange`, `onOpenAddRepo`
+  - SessionsView: Added "+" button next to Connected Repos count (visible when GitHub token is set) that opens Add Repo dialog
+  - SourcesView: Added "+" button for adding repos when GitHub token is set
+  - SettingsView: Complete GitHub Connection section with:
+    - Connected state: shows GitHub avatar, name/login, green status dot, "Disconnect GitHub" button
+    - Disconnected state: password input for token, "Connect GitHub" gradient button, scope note, link to GitHub token settings
+    - Loading/error states for connection flow
+- Ran `bun run lint` — zero errors
+- Verified dev server compiles and runs without errors
+
+Stage Summary:
+- Full GitHub repository creation feature integrated into the Super Agent interface
+- 3 new API proxy routes for GitHub API
+- GitHub token management with connect/disconnect flow in Settings
+- Add Repository dialog with Create New and Connect Existing tabs
+- "Add Repository" buttons in Sessions and Sources views when GitHub is connected
+- All UI matches existing dark glassmorphism theme
+- Zero lint errors, dev server running successfully

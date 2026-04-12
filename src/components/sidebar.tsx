@@ -1,11 +1,12 @@
 "use client";
 
-import { JulesSource, JulesSession, getSourceDisplayName } from "@/lib/jules-client";
+import { JulesSource, JulesSession, getSourceDisplayName, getGitHubUser, GitHubUser } from "@/lib/jules-client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 import {
   GitBranch,
   MessageSquare,
@@ -20,8 +21,13 @@ import {
   ChevronRight,
   Settings,
   Zap,
+  Github,
+  Link2,
+  ExternalLink,
+  Loader2,
+  Unplug,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type SidebarView = "sessions" | "sources" | "settings";
 
@@ -38,6 +44,9 @@ interface SidebarProps {
   maskedKey: string;
   activeView: SidebarView;
   onViewChange: (view: SidebarView) => void;
+  githubToken: string | null;
+  onGitHubTokenChange: (token: string | null) => void;
+  onOpenAddRepo: () => void;
 }
 
 function formatTimeAgo(dateStr: string): string {
@@ -108,6 +117,9 @@ export function Sidebar({
   onDisconnect,
   maskedKey,
   activeView,
+  githubToken,
+  onGitHubTokenChange,
+  onOpenAddRepo,
 }: SidebarProps) {
   const [sourcesExpanded, setSourcesExpanded] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -163,6 +175,8 @@ export function Sidebar({
             onRefresh={onRefresh}
             sourcesExpanded={sourcesExpanded}
             onToggleSources={() => setSourcesExpanded(!sourcesExpanded)}
+            githubToken={githubToken}
+            onOpenAddRepo={onOpenAddRepo}
           />
         )}
         {activeView === "sources" && (
@@ -170,12 +184,16 @@ export function Sidebar({
             sources={sources}
             isLoadingSources={isLoadingSources}
             onRefresh={onRefresh}
+            githubToken={githubToken}
+            onOpenAddRepo={onOpenAddRepo}
           />
         )}
         {activeView === "settings" && (
           <SettingsView
             onDisconnect={onDisconnect}
             onRefresh={onRefresh}
+            githubToken={githubToken}
+            onGitHubTokenChange={onGitHubTokenChange}
           />
         )}
       </ScrollArea>
@@ -209,6 +227,8 @@ function SessionsView({
   onRefresh,
   sourcesExpanded,
   onToggleSources,
+  githubToken,
+  onOpenAddRepo,
 }: {
   sessions: JulesSession[];
   sources: JulesSource[];
@@ -220,6 +240,8 @@ function SessionsView({
   onRefresh: () => void;
   sourcesExpanded: boolean;
   onToggleSources: () => void;
+  githubToken: string | null;
+  onOpenAddRepo: () => void;
 }) {
   return (
     <div className="py-2">
@@ -238,9 +260,20 @@ function SessionsView({
             <FolderGit2 className="h-3.5 w-3.5 text-[#64748b]" />
             <span className="text-[10px] font-semibold text-[#64748b] uppercase tracking-wider">Connected Repos</span>
           </div>
-          <Badge className="h-4 px-1.5 text-[9px] bg-[rgba(129,140,248,0.08)] text-[#818cf8] border-[rgba(129,140,248,0.12)] hover:bg-[rgba(129,140,248,0.12)]">
-            {sources.length}
-          </Badge>
+          <div className="flex items-center gap-1">
+            <Badge className="h-4 px-1.5 text-[9px] bg-[rgba(129,140,248,0.08)] text-[#818cf8] border-[rgba(129,140,248,0.12)] hover:bg-[rgba(129,140,248,0.12)]">
+              {sources.length}
+            </Badge>
+            {githubToken && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onOpenAddRepo(); }}
+                className="h-4 w-4 rounded flex items-center justify-center text-[#4a4a5a] hover:text-[#818cf8] hover:bg-[rgba(129,140,248,0.08)] transition-colors"
+                title="Add Repository"
+              >
+                <Plus className="h-3 w-3" />
+              </button>
+            )}
+          </div>
         </button>
 
         {sourcesExpanded && (
@@ -366,21 +399,36 @@ function SourcesView({
   sources,
   isLoadingSources,
   onRefresh,
+  githubToken,
+  onOpenAddRepo,
 }: {
   sources: JulesSource[];
   isLoadingSources: boolean;
   onRefresh: () => void;
+  githubToken: string | null;
+  onOpenAddRepo: () => void;
 }) {
   return (
     <div className="p-4">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-xs font-semibold text-[#64748b] uppercase tracking-wider">Connected Repositories</h3>
-        <button
-          onClick={onRefresh}
-          className="h-6 w-6 rounded-md flex items-center justify-center text-[#4a4a5a] hover:text-[#94a3b8] hover:bg-[rgba(255,255,255,0.04)] transition-colors"
-        >
-          <RefreshCw className="h-3 w-3" />
-        </button>
+        <div className="flex items-center gap-1">
+          {githubToken && (
+            <button
+              onClick={onOpenAddRepo}
+              className="h-6 w-6 rounded-md flex items-center justify-center text-[#4a4a5a] hover:text-[#818cf8] hover:bg-[rgba(129,140,248,0.08)] transition-colors"
+              title="Add Repository"
+            >
+              <Plus className="h-3 w-3" />
+            </button>
+          )}
+          <button
+            onClick={onRefresh}
+            className="h-6 w-6 rounded-md flex items-center justify-center text-[#4a4a5a] hover:text-[#94a3b8] hover:bg-[rgba(255,255,255,0.04)] transition-colors"
+          >
+            <RefreshCw className="h-3 w-3" />
+          </button>
+        </div>
       </div>
 
       {isLoadingSources ? (
@@ -422,15 +470,67 @@ function SourcesView({
 function SettingsView({
   onDisconnect,
   onRefresh,
+  githubToken,
+  onGitHubTokenChange,
 }: {
   onDisconnect: () => void;
   onRefresh: () => void;
+  githubToken: string | null;
+  onGitHubTokenChange: (token: string | null) => void;
 }) {
+  const [tokenInput, setTokenInput] = useState("");
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [githubUser, setGithubUser] = useState<GitHubUser | null>(null);
+  const [isLoadingUser, setIsLoadingUser] = useState(false);
+  const [connectError, setConnectError] = useState<string | null>(null);
+
+  // Fetch GitHub user when token exists
+  useEffect(() => {
+    if (githubToken) {
+      setIsLoadingUser(true);
+      getGitHubUser(githubToken)
+        .then((user) => setGithubUser(user))
+        .catch(() => setGithubUser(null))
+        .finally(() => setIsLoadingUser(false));
+    } else {
+      setGithubUser(null);
+    }
+  }, [githubToken]);
+
+  const handleConnect = async () => {
+    if (!tokenInput.trim()) {
+      setConnectError("Please enter a GitHub token");
+      return;
+    }
+
+    setIsConnecting(true);
+    setConnectError(null);
+
+    try {
+      const user = await getGitHubUser(tokenInput.trim());
+      onGitHubTokenChange(tokenInput.trim());
+      setGithubUser(user);
+      setTokenInput("");
+    } catch (err) {
+      setConnectError(err instanceof Error ? err.message : "Failed to connect to GitHub");
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handleDisconnect = () => {
+    onGitHubTokenChange(null);
+    setGithubUser(null);
+    setTokenInput("");
+    setConnectError(null);
+  };
+
   return (
     <div className="p-4">
       <h3 className="text-xs font-semibold text-[#64748b] uppercase tracking-wider mb-4">Settings</h3>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
+        {/* Refresh Data */}
         <button
           onClick={onRefresh}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#94a3b8] hover:text-white hover:bg-[rgba(255,255,255,0.03)] transition-all duration-200"
@@ -441,12 +541,109 @@ function SettingsView({
 
         <Separator className="bg-[rgba(255,255,255,0.04)]" />
 
+        {/* GitHub Connection */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Github className="h-4 w-4 text-[#818cf8]" />
+            <h4 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">GitHub Connection</h4>
+          </div>
+
+          {githubToken && githubUser ? (
+            /* Connected state */
+            <div className="space-y-3">
+              <div className="glass-card rounded-lg p-3">
+                <div className="flex items-center gap-3">
+                  {isLoadingUser ? (
+                    <Skeleton className="h-9 w-9 rounded-full bg-[rgba(255,255,255,0.03)]" />
+                  ) : (
+                    <img
+                      src={githubUser.avatar_url}
+                      alt={githubUser.login}
+                      className="h-9 w-9 rounded-full border border-[rgba(255,255,255,0.08)]"
+                    />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-white truncate">
+                      {githubUser.name || githubUser.login}
+                    </p>
+                    <p className="text-[11px] text-[#64748b] truncate">@{githubUser.login}</p>
+                  </div>
+                  <div className="h-2 w-2 rounded-full bg-[#10b981] shrink-0" title="Connected" />
+                </div>
+              </div>
+              <button
+                onClick={handleDisconnect}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[#ef4444] hover:bg-[rgba(239,68,68,0.08)] transition-all duration-200 text-sm"
+              >
+                <Unplug className="h-4 w-4" />
+                Disconnect GitHub
+              </button>
+            </div>
+          ) : (
+            /* Disconnected state */
+            <div className="space-y-3">
+              <p className="text-xs text-[#64748b] leading-relaxed">
+                Connect your GitHub account to create repositories directly from the agent.
+              </p>
+              <div className="space-y-2">
+                <Input
+                  type="password"
+                  placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                  value={tokenInput}
+                  onChange={(e) => { setTokenInput(e.target.value); setConnectError(null); }}
+                  disabled={isConnecting}
+                  className="bg-[#0d1117] border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(129,140,248,0.3)] input-glow h-9 rounded-lg text-xs font-mono transition-all duration-200"
+                />
+                <Button
+                  onClick={handleConnect}
+                  disabled={isConnecting || !tokenInput.trim()}
+                  className="w-full bg-gradient-agent hover:brightness-115 text-white h-9 rounded-lg font-medium text-sm transition-all duration-200 disabled:opacity-50 gap-2"
+                >
+                  {isConnecting ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : (
+                    <>
+                      <Link2 className="h-3.5 w-3.5" />
+                      Connect GitHub
+                    </>
+                  )}
+                </Button>
+              </div>
+              {connectError && (
+                <div className="rounded-lg bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.15)] px-3 py-2 text-xs text-[#f87171] animate-fade-in">
+                  {connectError}
+                </div>
+              )}
+              <div className="space-y-1.5">
+                <p className="text-[10px] text-[#4a4a5a]">
+                  Requires <code className="text-[#64748b] bg-[rgba(255,255,255,0.03)] px-1 rounded">repo</code> scope
+                </p>
+                <a
+                  href="https://github.com/settings/tokens"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-[10px] text-[#818cf8] hover:text-[#6366f1] transition-colors"
+                >
+                  Create a token on GitHub
+                  <ExternalLink className="h-2.5 w-2.5" />
+                </a>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <Separator className="bg-[rgba(255,255,255,0.04)]" />
+
+        {/* Disconnect Jules */}
         <button
           onClick={onDisconnect}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#ef4444] hover:bg-[rgba(239,68,68,0.08)] transition-all duration-200"
         >
           <LogOut className="h-4 w-4" />
-          <span className="text-sm">Disconnect</span>
+          <span className="text-sm">Disconnect Jules</span>
         </button>
       </div>
     </div>
