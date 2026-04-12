@@ -26,6 +26,8 @@ import {
   ExternalLink,
   Loader2,
   Unplug,
+  Globe,
+  Lock,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -123,6 +125,7 @@ export function Sidebar({
 }: SidebarProps) {
   const [sourcesExpanded, setSourcesExpanded] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [githubUser, setGithubUser] = useState<GitHubUser | null>(null);
 
   const handleCopyKey = () => {
     navigator.clipboard.writeText(maskedKey);
@@ -130,22 +133,46 @@ export function Sidebar({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Fetch GitHub user when token exists
+  useEffect(() => {
+    if (!githubToken) return;
+    let cancelled = false;
+    getGitHubUser(githubToken)
+      .then((user) => { if (!cancelled) setGithubUser(user); })
+      .catch(() => { if (!cancelled) setGithubUser(null); });
+    return () => { cancelled = true; };
+  }, [githubToken]);
+
   return (
     <div className="w-[300px] flex flex-col h-full border-r border-[rgba(255,255,255,0.04)]" style={{ background: "#0c0c14" }}>
-      {/* Agent Status Card */}
+      {/* Agent Status Card — shows GitHub user when connected */}
       <div className="p-4 border-b border-[rgba(255,255,255,0.04)]">
         <div className="flex items-center gap-3 mb-3">
-          <div className="h-8 w-8 rounded-lg bg-gradient-agent flex items-center justify-center shadow-md">
-            <Zap className="h-4 w-4 text-white" />
-          </div>
+          {githubToken && githubUser ? (
+            // Show GitHub avatar when connected
+            <img
+              src={githubUser.avatar_url}
+              alt={githubUser.login}
+              className="h-8 w-8 rounded-lg border border-[rgba(255,255,255,0.08)]"
+            />
+          ) : (
+            <div className="h-8 w-8 rounded-lg bg-gradient-agent flex items-center justify-center shadow-md">
+              <Zap className="h-4 w-4 text-white" />
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-white">Jules Agent</span>
+              <span className="text-sm font-semibold text-white truncate">
+                {githubToken && githubUser ? githubUser.name || githubUser.login : "Jules Agent"}
+              </span>
               <div className="flex items-center gap-1">
                 <div className="status-dot status-dot-online" />
                 <span className="text-[10px] text-[#10b981] font-medium">Online</span>
               </div>
             </div>
+            {githubToken && githubUser && (
+              <span className="text-[10px] text-[#64748b] font-mono">@{githubUser.login}</span>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -160,6 +187,23 @@ export function Sidebar({
             {copied ? <Check className="h-3 w-3 text-[#10b981]" /> : <Copy className="h-3 w-3" />}
           </button>
         </div>
+        {/* Quick GitHub badge */}
+        {githubToken && githubUser && (
+          <div className="flex items-center gap-2 mt-2.5 px-1">
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.04)] flex-1">
+              <Github className="h-3 w-3 text-[#818cf8]" />
+              <span className="text-[10px] text-[#818cf8] font-medium">GitHub Connected</span>
+            </div>
+            <button
+              onClick={onOpenAddRepo}
+              className="h-6 px-2 rounded-md flex items-center justify-center gap-1 bg-[rgba(129,140,248,0.08)] border border-[rgba(129,140,248,0.12)] text-[#818cf8] hover:bg-[rgba(129,140,248,0.15)] transition-all duration-200"
+              title="Add Repository"
+            >
+              <Plus className="h-3 w-3" />
+              <span className="text-[9px] font-medium">Repo</span>
+            </button>
+          </div>
+        )}
       </div>
 
       <ScrollArea className="flex-1 dark-scrollbar">
@@ -198,9 +242,31 @@ export function Sidebar({
         )}
       </ScrollArea>
 
-      {/* Bottom: New Session + Disconnect */}
+      {/* Bottom Action Bar */}
       <div className="p-3 border-t border-[rgba(255,255,255,0.04)] space-y-2">
-        {activeView === "sessions" && (
+        {/* Quick actions when GitHub is connected */}
+        {githubToken && activeView === "sessions" && (
+          <div className="flex gap-2">
+            <Button
+              onClick={onOpenAddRepo}
+              variant="outline"
+              className="flex-1 bg-[rgba(255,255,255,0.03)] border-[rgba(255,255,255,0.06)] text-[#94a3b8] hover:text-white hover:bg-[rgba(255,255,255,0.06)] gap-1.5 h-9 rounded-lg text-xs font-medium transition-all duration-200"
+              size="sm"
+            >
+              <Github className="h-3.5 w-3.5" />
+              Add Repo
+            </Button>
+            <Button
+              onClick={onNewSession}
+              className="flex-1 bg-gradient-agent hover:brightness-115 text-white gap-1.5 h-9 rounded-lg font-medium text-sm transition-all duration-200"
+              size="sm"
+            >
+              <Plus className="h-4 w-4" />
+              New Mission
+            </Button>
+          </div>
+        )}
+        {(!githubToken || activeView !== "sessions") && activeView === "sessions" && (
           <Button
             onClick={onNewSession}
             className="w-full bg-gradient-agent hover:brightness-115 text-white gap-2 h-9 rounded-lg font-medium text-sm transition-all duration-200"
@@ -245,13 +311,13 @@ function SessionsView({
 }) {
   return (
     <div className="py-2">
-      {/* Connected Repos */}
+      {/* Connected Repos — fixed: using div instead of nested button */}
       <div className="px-3 mb-2">
-        <button
-          onClick={onToggleSources}
-          className="flex items-center justify-between w-full group"
-        >
-          <div className="flex items-center gap-1.5">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={onToggleSources}
+            className="flex items-center gap-1.5 group"
+          >
             {sourcesExpanded ? (
               <ChevronDown className="h-3 w-3 text-[#64748b]" />
             ) : (
@@ -259,14 +325,14 @@ function SessionsView({
             )}
             <FolderGit2 className="h-3.5 w-3.5 text-[#64748b]" />
             <span className="text-[10px] font-semibold text-[#64748b] uppercase tracking-wider">Connected Repos</span>
-          </div>
+          </button>
           <div className="flex items-center gap-1">
             <Badge className="h-4 px-1.5 text-[9px] bg-[rgba(129,140,248,0.08)] text-[#818cf8] border-[rgba(129,140,248,0.12)] hover:bg-[rgba(129,140,248,0.12)]">
               {sources.length}
             </Badge>
             {githubToken && (
               <button
-                onClick={(e) => { e.stopPropagation(); onOpenAddRepo(); }}
+                onClick={onOpenAddRepo}
                 className="h-4 w-4 rounded flex items-center justify-center text-[#4a4a5a] hover:text-[#818cf8] hover:bg-[rgba(129,140,248,0.08)] transition-colors"
                 title="Add Repository"
               >
@@ -274,7 +340,7 @@ function SessionsView({
               </button>
             )}
           </div>
-        </button>
+        </div>
 
         {sourcesExpanded && (
           <div className="mt-1.5 ml-1">
@@ -284,7 +350,18 @@ function SessionsView({
                 <Skeleton className="h-6 bg-[rgba(255,255,255,0.03)]" />
               </div>
             ) : sources.length === 0 ? (
-              <p className="text-[10px] text-[#4a4a5a] px-2 py-1">No sources connected</p>
+              <div className="px-2 py-2">
+                <p className="text-[10px] text-[#4a4a5a] mb-2">No sources connected</p>
+                {githubToken && (
+                  <button
+                    onClick={onOpenAddRepo}
+                    className="flex items-center gap-1.5 text-[10px] text-[#818cf8] hover:text-[#6366f1] transition-colors"
+                  >
+                    <Plus className="h-3 w-3" />
+                    Create a new repo
+                  </button>
+                )}
+              </div>
             ) : (
               <div className="space-y-0.5">
                 {sources.map((source) => (
@@ -296,6 +373,15 @@ function SessionsView({
                     <span className="truncate text-xs font-mono">{getSourceDisplayName(source)}</span>
                   </div>
                 ))}
+                {githubToken && (
+                  <button
+                    onClick={onOpenAddRepo}
+                    className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-[#64748b] hover:text-[#818cf8] hover:bg-[rgba(129,140,248,0.04)] transition-all duration-200"
+                  >
+                    <Plus className="h-3 w-3 shrink-0" />
+                    <span className="text-xs">Add repository</span>
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -394,7 +480,7 @@ function SessionsView({
   );
 }
 
-/* Sources View */
+/* Sources View — redesigned for better UX with GitHub connected */
 function SourcesView({
   sources,
   isLoadingSources,
@@ -411,15 +497,16 @@ function SourcesView({
   return (
     <div className="p-4">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xs font-semibold text-[#64748b] uppercase tracking-wider">Connected Repositories</h3>
+        <h3 className="text-xs font-semibold text-[#64748b] uppercase tracking-wider">Repositories</h3>
         <div className="flex items-center gap-1">
           {githubToken && (
             <button
               onClick={onOpenAddRepo}
-              className="h-6 w-6 rounded-md flex items-center justify-center text-[#4a4a5a] hover:text-[#818cf8] hover:bg-[rgba(129,140,248,0.08)] transition-colors"
+              className="h-6 px-2 rounded-md flex items-center justify-center gap-1 bg-[rgba(129,140,248,0.08)] border border-[rgba(129,140,248,0.12)] text-[#818cf8] hover:bg-[rgba(129,140,248,0.15)] transition-all duration-200"
               title="Add Repository"
             >
               <Plus className="h-3 w-3" />
+              <span className="text-[9px] font-medium">New</span>
             </button>
           )}
           <button
@@ -430,6 +517,27 @@ function SourcesView({
           </button>
         </div>
       </div>
+
+      {/* Add repo CTA when GitHub connected and no repos */}
+      {githubToken && sources.length === 0 && !isLoadingSources && (
+        <div className="mb-4 rounded-xl bg-[rgba(129,140,248,0.04)] border border-[rgba(129,140,248,0.08)] p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Github className="h-4 w-4 text-[#818cf8]" />
+            <span className="text-sm font-medium text-white">Create your first repo</span>
+          </div>
+          <p className="text-xs text-[#64748b] mb-3 leading-relaxed">
+            You&apos;re connected to GitHub! Create a new repository to get started with Jules.
+          </p>
+          <Button
+            onClick={onOpenAddRepo}
+            className="w-full bg-gradient-agent hover:brightness-115 text-white h-8 rounded-lg font-medium text-xs transition-all duration-200 gap-1.5"
+            size="sm"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Create Repository
+          </Button>
+        </div>
+      )}
 
       {isLoadingSources ? (
         <div className="space-y-3">
@@ -453,13 +561,33 @@ function SourcesView({
                 <div className="h-8 w-8 rounded-md bg-[rgba(129,140,248,0.08)] flex items-center justify-center shrink-0">
                   <GitBranch className="h-4 w-4 text-[#818cf8]" />
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm font-mono text-white truncate">{getSourceDisplayName(source)}</p>
                   <p className="text-[10px] text-[#4a4a5a] truncate">{source.id || source.name}</p>
                 </div>
+                <a
+                  href={`https://github.com/${getSourceDisplayName(source)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="h-6 w-6 rounded-md flex items-center justify-center text-[#4a4a5a] hover:text-[#818cf8] hover:bg-[rgba(129,140,248,0.08)] transition-colors shrink-0"
+                  title="Open on GitHub"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                </a>
               </div>
             </div>
           ))}
+
+          {/* Add more repos link at the bottom when GitHub is connected */}
+          {githubToken && (
+            <button
+              onClick={onOpenAddRepo}
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-lg border border-dashed border-[rgba(255,255,255,0.06)] text-[#64748b] hover:text-[#818cf8] hover:border-[rgba(129,140,248,0.15)] hover:bg-[rgba(129,140,248,0.03)] transition-all duration-200"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="text-xs font-medium">Add Repository</span>
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -541,15 +669,15 @@ function SettingsView({
 
         <Separator className="bg-[rgba(255,255,255,0.04)]" />
 
-        {/* GitHub Connection */}
+        {/* GitHub Connection — redesigned */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Github className="h-4 w-4 text-[#818cf8]" />
-            <h4 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">GitHub Connection</h4>
+            <h4 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">GitHub</h4>
           </div>
 
           {githubToken && githubUser ? (
-            /* Connected state */
+            /* Connected state — richer UI */
             <div className="space-y-3">
               <div className="glass-card rounded-lg p-3">
                 <div className="flex items-center gap-3">
@@ -571,6 +699,25 @@ function SettingsView({
                   <div className="h-2 w-2 rounded-full bg-[#10b981] shrink-0" title="Connected" />
                 </div>
               </div>
+
+              {/* Quick actions when connected */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-[rgba(16,185,129,0.04)] border border-[rgba(16,185,129,0.08)]">
+                  <Globe className="h-3.5 w-3.5 text-[#10b981]" />
+                  <div>
+                    <p className="text-[10px] font-medium text-[#10b981]">Public repos</p>
+                    <p className="text-[9px] text-[#4a4a5a]">Full access</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-[rgba(245,158,11,0.04)] border border-[rgba(245,158,11,0.08)]">
+                  <Lock className="h-3.5 w-3.5 text-[#f59e0b]" />
+                  <div>
+                    <p className="text-[10px] font-medium text-[#f59e0b]">Private repos</p>
+                    <p className="text-[9px] text-[#4a4a5a]">Full access</p>
+                  </div>
+                </div>
+              </div>
+
               <button
                 onClick={handleDisconnect}
                 className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[#ef4444] hover:bg-[rgba(239,68,68,0.08)] transition-all duration-200 text-sm"
@@ -580,11 +727,17 @@ function SettingsView({
               </button>
             </div>
           ) : (
-            /* Disconnected state */
+            /* Disconnected state — cleaner CTA */
             <div className="space-y-3">
-              <p className="text-xs text-[#64748b] leading-relaxed">
-                Connect your GitHub account to create repositories directly from the agent.
-              </p>
+              <div className="rounded-xl bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.04)] p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Github className="h-4 w-4 text-[#818cf8]" />
+                  <span className="text-xs font-medium text-white">Connect GitHub</span>
+                </div>
+                <p className="text-[11px] text-[#64748b] leading-relaxed">
+                  Create repos, manage code, and unlock full agent capabilities.
+                </p>
+              </div>
               <div className="space-y-2">
                 <Input
                   type="password"
