@@ -8,53 +8,60 @@ import { NewSessionDialog } from "@/components/new-session-dialog";
 import { AddRepoDialog } from "@/components/add-repo-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { getSupabaseClient } from "@/lib/supabase-client";
+import {
+  loadSavedSessions,
+  saveSession,
+  subscribeToSessionUpdates,
+  type SavedSession,
+} from "@/lib/supabase-data";
+import type { User } from "@supabase/supabase-js";
 import {
   Zap,
   FolderGit2,
   MessageSquare,
   Settings,
   Bot,
+  Database,
+  User as UserIcon,
+  LogOut,
+  Bookmark,
 } from "lucide-react";
 
 type SidebarView = "sessions" | "sources" | "settings";
 
-const GITHUB_TOKEN_KEY = "github-token";
-
 interface DashboardProps {
   apiKey: string;
   onDisconnect: () => void;
+  githubToken: string | null;
+  onGithubTokenChange: (token: string | null) => void;
+  supabaseUser: User | null;
+  onSignIn: () => void;
+  onSignOut: () => void;
+  onResetSupabase: () => void;
 }
 
-export function Dashboard({ apiKey, onDisconnect }: DashboardProps) {
+export function Dashboard({
+  apiKey,
+  onDisconnect,
+  githubToken,
+  onGithubTokenChange,
+  supabaseUser,
+  onSignIn,
+  onSignOut,
+  onResetSupabase,
+}: DashboardProps) {
   const [sources, setSources] = useState<JulesSource[]>([]);
   const [sessions, setSessions] = useState<JulesSession[]>([]);
+  const [savedSessions, setSavedSessions] = useState<SavedSession[]>([]);
   const [isLoadingSources, setIsLoadingSources] = useState(true);
   const [isLoadingSessions, setIsLoadingSessions] = useState(true);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [isNewSessionOpen, setIsNewSessionOpen] = useState(false);
   const [showAddRepoDialog, setShowAddRepoDialog] = useState(false);
   const [activeView, setActiveView] = useState<SidebarView>("sessions");
-  const [githubToken, setGithubToken] = useState<string | null>(null);
 
   const maskedKey = `••••••••${apiKey.slice(-4)}`;
-
-  // Load GitHub token from localStorage on mount
-  useEffect(() => {
-    const stored = localStorage.getItem(GITHUB_TOKEN_KEY);
-    if (stored) {
-      setGithubToken(stored);
-    }
-  }, []);
-
-  const handleGithubTokenChange = useCallback((token: string | null) => {
-    if (token) {
-      localStorage.setItem(GITHUB_TOKEN_KEY, token);
-      setGithubToken(token);
-    } else {
-      localStorage.removeItem(GITHUB_TOKEN_KEY);
-      setGithubToken(null);
-    }
-  }, []);
 
   const fetchSources = useCallback(async () => {
     setIsLoadingSources(true);
@@ -62,7 +69,7 @@ export function Dashboard({ apiKey, onDisconnect }: DashboardProps) {
       const data = await listSources(apiKey);
       setSources(data.sources || []);
     } catch {
-      // Error handled silently; sidebar shows empty state
+      // Error handled silently
     } finally {
       setIsLoadingSources(false);
     }
@@ -73,17 +80,70 @@ export function Dashboard({ apiKey, onDisconnect }: DashboardProps) {
     try {
       const data = await listSessions(apiKey);
       setSessions(data.sessions || []);
+
+      // Auto-save sessions to Supabase if logged in
+      if (supabaseUser && data.sessions) {
+        for (const session of data.sessions) {
+          const sessionId = session.name.split("/").pop() || session.name;
+          try {
+            await saveSession(supabaseUser.id, sessionId, {
+              sessionTitle: session.title || undefined,
+              sessionState: session.state || undefined,
+              sourceName: session.sourceContext?.source?.replace("sources/", "") || undefined,
+              prompt: session.prompt || undefined,
+            });
+          } catch {
+            // Silently fail — Supabase tables may not be set up
+          }
+        }
+
+        // Reload saved sessions
+        try {
+          const saved = await loadSavedSessions(supabaseUser.id);
+          setSavedSessions(saved);
+        } catch {
+          // Silently fail
+        }
+      }
     } catch {
-      // Error handled silently; sidebar shows empty state
+      // Error handled silently
     } finally {
       setIsLoadingSessions(false);
     }
-  }, [apiKey]);
+  }, [apiKey, supabaseUser]);
 
   useEffect(() => {
     fetchSources();
     fetchSessions();
   }, [fetchSources, fetchSessions]);
+
+  // Subscribe to realtime updates if Supabase is configured
+  useEffect(() => {
+    if (!supabaseUser) return;
+
+    const unsubscribe = subscribeToSessionUpdates(
+      supabaseUser.id,
+      (updatedSession) => {
+        setSavedSessions((prev) =>
+          prev.map((s) =>
+            s.session_id === updatedSession.session_id ? updatedSession : s
+          )
+        );
+      },
+      (deletedSessionId) => {
+        setSavedSessions((prev) =>
+          prev.filter((s) => s.session_id !== deletedSessionId)
+        );
+      }
+    );
+
+    // Load saved sessions
+    loadSavedSessions(supabaseUser.id)
+      .then(setSavedSessions)
+      .catch(() => {});
+
+    return unsubscribe;
+  }, [supabaseUser]);
 
   const handleRefresh = () => {
     fetchSources();
@@ -125,16 +185,55 @@ export function Dashboard({ apiKey, onDisconnect }: DashboardProps) {
               active={activeView === "sources"}
               onClick={() => setActiveView("sources")}
             />
+            {/* Bookmarks — only show when Supabase is connected */}
+            {supabaseUser && (
+              <NavItem
+                icon={<Bookmark className="h-5 w-5" />}
+                label="Bookmarks"
+                active={activeView === "bookmarks"}
+                onClick={() => setActiveView("bookmarks")}
+              />
+            )}
           </div>
 
           {/* Bottom Icons */}
           <div className="flex flex-col items-center gap-1">
+            {/* Supabase indicator */}
+            {getSupabaseClient() && (
+              <NavItem
+                icon={<Database className="h-5 w-5" />}
+                label={supabaseUser ? "Supabase Connected" : "Supabase (no auth)"}
+                active={false}
+                onClick={() => {}}
+                indicator={supabaseUser ? "green" : "yellow"}
+              />
+            )}
             <NavItem
               icon={<Settings className="h-5 w-5" />}
               label="Settings"
               active={activeView === "settings"}
               onClick={() => setActiveView("settings")}
             />
+            {/* User avatar */}
+            {supabaseUser ? (
+              <NavItem
+                icon={
+                  <div className="h-6 w-6 rounded-full bg-gradient-to-br from-[#10b981] to-[#059669] flex items-center justify-center text-[9px] font-bold text-white overflow-hidden">
+                    {(supabaseUser.email || "U")[0].toUpperCase()}
+                  </div>
+                }
+                label={`Signed in as ${supabaseUser.email}`}
+                active={false}
+                onClick={onSignOut}
+              />
+            ) : (
+              <NavItem
+                icon={<UserIcon className="h-5 w-5" />}
+                label="Sign In"
+                active={false}
+                onClick={onSignIn}
+              />
+            )}
           </div>
         </div>
 
@@ -153,8 +252,13 @@ export function Dashboard({ apiKey, onDisconnect }: DashboardProps) {
           activeView={activeView}
           onViewChange={setActiveView}
           githubToken={githubToken}
-          onGitHubTokenChange={handleGithubTokenChange}
+          onGitHubTokenChange={onGithubTokenChange}
           onOpenAddRepo={() => setShowAddRepoDialog(true)}
+          supabaseUser={supabaseUser}
+          onSignIn={onSignIn}
+          onSignOut={onSignOut}
+          onResetSupabase={onResetSupabase}
+          savedSessions={savedSessions}
         />
 
         {/* Column 3: Main Agent View */}
@@ -180,27 +284,44 @@ export function Dashboard({ apiKey, onDisconnect }: DashboardProps) {
                   <Bot className="h-12 w-12 text-white" />
                 </div>
                 <div className="absolute -inset-3 rounded-3xl bg-gradient-agent opacity-15 animate-pulse-ring" />
+                {/* Supabase badge */}
+                {supabaseUser && (
+                  <div className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-gradient-to-br from-[#10b981] to-[#059669] flex items-center justify-center border-2 border-[#0a0a0f] shadow-md">
+                    <Database className="h-3.5 w-3.5 text-white" />
+                  </div>
+                )}
               </div>
 
               <div>
                 <h3 className="text-2xl font-bold text-white mb-2">Ready to assist</h3>
                 <p className="text-sm text-[#94a3b8]">
-                  Select a session from the panel or create a new mission to get started with your AI agent.
+                  {supabaseUser
+                    ? `Welcome back, ${supabaseUser.email?.split("@")[0] || "Agent"}. Select a session or create a new mission.`
+                    : "Select a session from the panel or create a new mission to get started with your AI agent."}
                 </p>
               </div>
 
               <div className="flex items-center gap-3">
-                <Badge
-                  className="bg-[rgba(129,140,248,0.08)] text-[#818cf8] border-[rgba(129,140,248,0.15)] hover:bg-[rgba(129,140,248,0.12)] text-xs px-3 py-1"
-                >
+                <Badge className="bg-[rgba(129,140,248,0.08)] text-[#818cf8] border-[rgba(129,140,248,0.15)] hover:bg-[rgba(129,140,248,0.12)] text-xs px-3 py-1">
                   {sessions.length} sessions
                 </Badge>
-                <Badge
-                  className="bg-[rgba(16,185,129,0.08)] text-[#10b981] border-[rgba(16,185,129,0.15)] hover:bg-[rgba(16,185,129,0.12)] text-xs px-3 py-1"
-                >
+                <Badge className="bg-[rgba(16,185,129,0.08)] text-[#10b981] border-[rgba(16,185,129,0.15)] hover:bg-[rgba(16,185,129,0.12)] text-xs px-3 py-1">
                   {sources.length} sources
                 </Badge>
+                {supabaseUser && (
+                  <Badge className="bg-[rgba(245,158,11,0.08)] text-[#f59e0b] border-[rgba(245,158,11,0.15)] hover:bg-[rgba(245,158,11,0.12)] text-xs px-3 py-1">
+                    {savedSessions.length} saved
+                  </Badge>
+                )}
               </div>
+
+              {/* Supabase status */}
+              {supabaseUser && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[rgba(16,185,129,0.04)] border border-[rgba(16,185,129,0.08)]">
+                  <div className="h-2 w-2 rounded-full bg-[#10b981] animate-pulse" />
+                  <span className="text-[11px] text-[#10b981] font-medium">Supabase synced — data persists across sessions</span>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -232,11 +353,13 @@ function NavItem({
   label,
   active,
   onClick,
+  indicator,
 }: {
   icon: React.ReactNode;
   label: string;
   active: boolean;
   onClick: () => void;
+  indicator?: "green" | "yellow";
 }) {
   return (
     <Tooltip>
@@ -253,6 +376,11 @@ function NavItem({
             <div className="absolute -left-[5px] top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full bg-[#818cf8]" />
           )}
           {icon}
+          {indicator && (
+            <div className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#08080d] ${
+              indicator === "green" ? "bg-[#10b981]" : "bg-[#f59e0b]"
+            }`} />
+          )}
         </button>
       </TooltipTrigger>
       <TooltipContent side="right" className="bg-[#1a1a2e] text-white border-[rgba(255,255,255,0.06)] text-xs">

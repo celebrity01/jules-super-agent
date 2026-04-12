@@ -7,6 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
+import { getSupabaseClient } from "@/lib/supabase-client";
+import type { SavedSession } from "@/lib/supabase-data";
+import type { User } from "@supabase/supabase-js";
 import {
   GitBranch,
   MessageSquare,
@@ -28,10 +31,16 @@ import {
   Unplug,
   Globe,
   Lock,
+  Database,
+  Bookmark,
+  Star,
+  Trash2,
+  User as UserIcon,
+  Shield,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
-type SidebarView = "sessions" | "sources" | "settings";
+type SidebarView = "sessions" | "sources" | "settings" | "bookmarks";
 
 interface SidebarProps {
   sources: JulesSource[];
@@ -49,6 +58,11 @@ interface SidebarProps {
   githubToken: string | null;
   onGitHubTokenChange: (token: string | null) => void;
   onOpenAddRepo: () => void;
+  supabaseUser: User | null;
+  onSignIn: () => void;
+  onSignOut: () => void;
+  onResetSupabase: () => void;
+  savedSessions: SavedSession[];
 }
 
 function formatTimeAgo(dateStr: string): string {
@@ -93,17 +107,12 @@ function getStateConfig(state?: string): { color: string; bg: string; label: str
 
 function getStateDotColor(state?: string): string {
   switch (state) {
-    case "COMPLETED":
-      return "bg-[#10b981]";
-    case "FAILED":
-      return "bg-[#ef4444]";
+    case "COMPLETED": return "bg-[#10b981]";
+    case "FAILED": return "bg-[#ef4444]";
     case "ACTIVE":
-    case "RUNNING":
-      return "bg-[#818cf8]";
-    case "AWAITING_APPROVAL":
-      return "bg-[#f59e0b]";
-    default:
-      return "bg-[#64748b]";
+    case "RUNNING": return "bg-[#818cf8]";
+    case "AWAITING_APPROVAL": return "bg-[#f59e0b]";
+    default: return "bg-[#64748b]";
   }
 }
 
@@ -122,6 +131,11 @@ export function Sidebar({
   githubToken,
   onGitHubTokenChange,
   onOpenAddRepo,
+  supabaseUser,
+  onSignIn,
+  onSignOut,
+  onResetSupabase,
+  savedSessions,
 }: SidebarProps) {
   const [sourcesExpanded, setSourcesExpanded] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -145,11 +159,15 @@ export function Sidebar({
 
   return (
     <div className="w-[300px] flex flex-col h-full border-r border-[rgba(255,255,255,0.04)]" style={{ background: "#0c0c14" }}>
-      {/* Agent Status Card — shows GitHub user when connected */}
+      {/* Agent Status Card */}
       <div className="p-4 border-b border-[rgba(255,255,255,0.04)]">
         <div className="flex items-center gap-3 mb-3">
-          {githubToken && githubUser ? (
-            // Show GitHub avatar when connected
+          {supabaseUser ? (
+            // Show user avatar when logged in
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-[#10b981] to-[#059669] flex items-center justify-center text-white text-sm font-bold shadow-md">
+              {(supabaseUser.email || "U")[0].toUpperCase()}
+            </div>
+          ) : githubToken && githubUser ? (
             <img
               src={githubUser.avatar_url}
               alt={githubUser.login}
@@ -163,18 +181,30 @@ export function Sidebar({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-white truncate">
-                {githubToken && githubUser ? githubUser.name || githubUser.login : "Jules Agent"}
+                {supabaseUser
+                  ? supabaseUser.email?.split("@")[0] || "Agent"
+                  : githubToken && githubUser
+                  ? githubUser.name || githubUser.login
+                  : "Jules Agent"}
               </span>
               <div className="flex items-center gap-1">
                 <div className="status-dot status-dot-online" />
                 <span className="text-[10px] text-[#10b981] font-medium">Online</span>
               </div>
             </div>
-            {githubToken && githubUser && (
+            {supabaseUser && (
+              <span className="text-[10px] text-[#10b981] font-mono flex items-center gap-1">
+                <Database className="h-2.5 w-2.5" />
+                Synced
+              </span>
+            )}
+            {!supabaseUser && githubToken && githubUser && (
               <span className="text-[10px] text-[#64748b] font-mono">@{githubUser.login}</span>
             )}
           </div>
         </div>
+
+        {/* API Key display */}
         <div className="flex items-center gap-2">
           <div className="flex-1 flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.04)]">
             <Key className="h-3 w-3 text-[#64748b]" />
@@ -187,13 +217,28 @@ export function Sidebar({
             {copied ? <Check className="h-3 w-3 text-[#10b981]" /> : <Copy className="h-3 w-3" />}
           </button>
         </div>
-        {/* Quick GitHub badge */}
-        {githubToken && githubUser && (
-          <div className="flex items-center gap-2 mt-2.5 px-1">
+
+        {/* Quick badges row */}
+        <div className="flex items-center gap-2 mt-2.5 px-1">
+          {githubToken && githubUser && (
             <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.04)] flex-1">
               <Github className="h-3 w-3 text-[#818cf8]" />
-              <span className="text-[10px] text-[#818cf8] font-medium">GitHub Connected</span>
+              <span className="text-[10px] text-[#818cf8] font-medium">GitHub</span>
             </div>
+          )}
+          {supabaseUser && (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[rgba(16,185,129,0.04)] border border-[rgba(16,185,129,0.08)] flex-1">
+              <Database className="h-3 w-3 text-[#10b981]" />
+              <span className="text-[10px] text-[#10b981] font-medium">Supabase</span>
+            </div>
+          )}
+          {!supabaseUser && !githubToken && (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[rgba(245,158,11,0.04)] border border-[rgba(245,158,11,0.08)] flex-1">
+              <Shield className="h-3 w-3 text-[#f59e0b]" />
+              <span className="text-[10px] text-[#f59e0b] font-medium">Local only</span>
+            </div>
+          )}
+          {(githubToken || supabaseUser) && (
             <button
               onClick={onOpenAddRepo}
               className="h-6 px-2 rounded-md flex items-center justify-center gap-1 bg-[rgba(129,140,248,0.08)] border border-[rgba(129,140,248,0.12)] text-[#818cf8] hover:bg-[rgba(129,140,248,0.15)] transition-all duration-200"
@@ -202,8 +247,8 @@ export function Sidebar({
               <Plus className="h-3 w-3" />
               <span className="text-[9px] font-medium">Repo</span>
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <ScrollArea className="flex-1 dark-scrollbar">
@@ -232,33 +277,44 @@ export function Sidebar({
             onOpenAddRepo={onOpenAddRepo}
           />
         )}
+        {activeView === "bookmarks" && (
+          <BookmarksView
+            savedSessions={savedSessions}
+            onSelectSession={onSelectSession}
+          />
+        )}
         {activeView === "settings" && (
           <SettingsView
             onDisconnect={onDisconnect}
             onRefresh={onRefresh}
             githubToken={githubToken}
             onGitHubTokenChange={onGitHubTokenChange}
+            supabaseUser={supabaseUser}
+            onSignIn={onSignIn}
+            onSignOut={onSignOut}
+            onResetSupabase={onResetSupabase}
           />
         )}
       </ScrollArea>
 
       {/* Bottom Action Bar */}
       <div className="p-3 border-t border-[rgba(255,255,255,0.04)] space-y-2">
-        {/* Quick actions when GitHub is connected */}
-        {githubToken && activeView === "sessions" && (
+        {activeView === "sessions" && (
           <div className="flex gap-2">
-            <Button
-              onClick={onOpenAddRepo}
-              variant="outline"
-              className="flex-1 bg-[rgba(255,255,255,0.03)] border-[rgba(255,255,255,0.06)] text-[#94a3b8] hover:text-white hover:bg-[rgba(255,255,255,0.06)] gap-1.5 h-9 rounded-lg text-xs font-medium transition-all duration-200"
-              size="sm"
-            >
-              <Github className="h-3.5 w-3.5" />
-              Add Repo
-            </Button>
+            {githubToken && (
+              <Button
+                onClick={onOpenAddRepo}
+                variant="outline"
+                className="flex-1 bg-[rgba(255,255,255,0.03)] border-[rgba(255,255,255,0.06)] text-[#94a3b8] hover:text-white hover:bg-[rgba(255,255,255,0.06)] gap-1.5 h-9 rounded-lg text-xs font-medium transition-all duration-200"
+                size="sm"
+              >
+                <Github className="h-3.5 w-3.5" />
+                Add Repo
+              </Button>
+            )}
             <Button
               onClick={onNewSession}
-              className="flex-1 bg-gradient-agent hover:brightness-115 text-white gap-1.5 h-9 rounded-lg font-medium text-sm transition-all duration-200"
+              className={`${githubToken ? 'flex-1' : 'w-full'} bg-gradient-agent hover:brightness-115 text-white gap-1.5 h-9 rounded-lg font-medium text-sm transition-all duration-200`}
               size="sm"
             >
               <Plus className="h-4 w-4" />
@@ -266,22 +322,12 @@ export function Sidebar({
             </Button>
           </div>
         )}
-        {(!githubToken || activeView !== "sessions") && activeView === "sessions" && (
-          <Button
-            onClick={onNewSession}
-            className="w-full bg-gradient-agent hover:brightness-115 text-white gap-2 h-9 rounded-lg font-medium text-sm transition-all duration-200"
-            size="sm"
-          >
-            <Plus className="h-4 w-4" />
-            New Mission
-          </Button>
-        )}
       </div>
     </div>
   );
 }
 
-/* Sessions View */
+/* Sessions View — fixed: no nested buttons */
 function SessionsView({
   sessions,
   sources,
@@ -311,7 +357,7 @@ function SessionsView({
 }) {
   return (
     <div className="py-2">
-      {/* Connected Repos — fixed: using div instead of nested button */}
+      {/* Connected Repos — FIXED: using separate div elements, no nested buttons */}
       <div className="px-3 mb-2">
         <div className="flex items-center justify-between">
           <button
@@ -332,7 +378,7 @@ function SessionsView({
             </Badge>
             {githubToken && (
               <button
-                onClick={onOpenAddRepo}
+                onClick={(e) => { e.stopPropagation(); onOpenAddRepo(); }}
                 className="h-4 w-4 rounded flex items-center justify-center text-[#4a4a5a] hover:text-[#818cf8] hover:bg-[rgba(129,140,248,0.08)] transition-colors"
                 title="Add Repository"
               >
@@ -453,7 +499,6 @@ function SessionsView({
                     </span>
                     <div className={`h-2 w-2 rounded-full shrink-0 mt-1.5 ${getStateDotColor(session.state)}`} />
                   </div>
-                  {/* Status pill */}
                   <div className="flex items-center gap-2 mt-1.5">
                     <span className={`inline-flex items-center text-[9px] font-medium px-1.5 py-0.5 rounded border ${stateConfig.bg} ${stateConfig.color}`}>
                       {stateConfig.label}
@@ -464,7 +509,6 @@ function SessionsView({
                       </span>
                     )}
                   </div>
-                  {/* Prompt preview */}
                   {session.prompt && (
                     <p className="text-[11px] text-[#4a4a5a] mt-1.5 truncate leading-relaxed">
                       {session.prompt}
@@ -480,7 +524,81 @@ function SessionsView({
   );
 }
 
-/* Sources View — redesigned for better UX with GitHub connected */
+/* Bookmarks View — new for Supabase */
+function BookmarksView({
+  savedSessions,
+  onSelectSession,
+}: {
+  savedSessions: SavedSession[];
+  onSelectSession: (id: string) => void;
+}) {
+  const bookmarked = savedSessions.filter((s) => s.bookmarked);
+  const allSaved = savedSessions;
+
+  return (
+    <div className="p-4">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-xs font-semibold text-[#64748b] uppercase tracking-wider flex items-center gap-1.5">
+          <Bookmark className="h-3.5 w-3.5" />
+          Saved Sessions
+        </h3>
+        <Badge className="h-4 px-1.5 text-[9px] bg-[rgba(245,158,11,0.08)] text-[#f59e0b] border-[rgba(245,158,11,0.12)]">
+          {allSaved.length}
+        </Badge>
+      </div>
+
+      {allSaved.length === 0 ? (
+        <div className="text-center py-8">
+          <Bookmark className="h-8 w-8 text-[#2a2a3a] mx-auto mb-2" />
+          <p className="text-xs text-[#4a4a5a]">No saved sessions yet</p>
+          <p className="text-[10px] text-[#3a3a4a] mt-1">
+            Sessions are auto-saved when Supabase is connected
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-1.5">
+          {allSaved.map((saved) => (
+            <button
+              key={saved.id}
+              onClick={() => onSelectSession(saved.session_id)}
+              className="w-full text-left glass-card-hover rounded-lg px-3 py-2.5"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-medium text-white truncate">
+                  {saved.session_title || saved.session_id}
+                </span>
+                {saved.bookmarked && (
+                  <Star className="h-3.5 w-3.5 text-[#f59e0b] shrink-0 fill-[#f59e0b]" />
+                )}
+              </div>
+              {saved.source_name && (
+                <div className="flex items-center gap-1.5 mt-1">
+                  <GitBranch className="h-3 w-3 text-[#4a4a5a]" />
+                  <span className="text-[10px] text-[#4a4a5a] font-mono truncate">{saved.source_name}</span>
+                </div>
+              )}
+              {saved.prompt && (
+                <p className="text-[10px] text-[#4a4a5a] mt-1 truncate">{saved.prompt}</p>
+              )}
+              <div className="flex items-center gap-2 mt-1.5">
+                {saved.session_state && (
+                  <span className={`text-[9px] font-medium ${getStateConfig(saved.session_state).color}`}>
+                    {getStateConfig(saved.session_state).label}
+                  </span>
+                )}
+                <span className="text-[9px] text-[#3a3a4a]">
+                  {formatTimeAgo(saved.updated_at)}
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* Sources View */
 function SourcesView({
   sources,
   isLoadingSources,
@@ -518,7 +636,6 @@ function SourcesView({
         </div>
       </div>
 
-      {/* Add repo CTA when GitHub connected and no repos */}
       {githubToken && sources.length === 0 && !isLoadingSources && (
         <div className="mb-4 rounded-xl bg-[rgba(129,140,248,0.04)] border border-[rgba(129,140,248,0.08)] p-4">
           <div className="flex items-center gap-2 mb-2">
@@ -578,7 +695,6 @@ function SourcesView({
             </div>
           ))}
 
-          {/* Add more repos link at the bottom when GitHub is connected */}
           {githubToken && (
             <button
               onClick={onOpenAddRepo}
@@ -594,17 +710,25 @@ function SourcesView({
   );
 }
 
-/* Settings View */
+/* Settings View — enhanced with Supabase */
 function SettingsView({
   onDisconnect,
   onRefresh,
   githubToken,
   onGitHubTokenChange,
+  supabaseUser,
+  onSignIn,
+  onSignOut,
+  onResetSupabase,
 }: {
   onDisconnect: () => void;
   onRefresh: () => void;
   githubToken: string | null;
   onGitHubTokenChange: (token: string | null) => void;
+  supabaseUser: User | null;
+  onSignIn: () => void;
+  onSignOut: () => void;
+  onResetSupabase: () => void;
 }) {
   const [tokenInput, setTokenInput] = useState("");
   const [isConnecting, setIsConnecting] = useState(false);
@@ -669,7 +793,89 @@ function SettingsView({
 
         <Separator className="bg-[rgba(255,255,255,0.04)]" />
 
-        {/* GitHub Connection — redesigned */}
+        {/* Supabase Account Section */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Database className="h-4 w-4 text-[#10b981]" />
+            <h4 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">Supabase</h4>
+          </div>
+
+          {supabaseUser ? (
+            <div className="space-y-3">
+              <div className="glass-card rounded-lg p-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-full bg-gradient-to-br from-[#10b981] to-[#059669] flex items-center justify-center text-white text-sm font-bold shrink-0">
+                    {(supabaseUser.email || "U")[0].toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-white truncate">
+                      {supabaseUser.email}
+                    </p>
+                    <p className="text-[11px] text-[#10b981] flex items-center gap-1">
+                      <div className="h-1.5 w-1.5 rounded-full bg-[#10b981]" />
+                      Authenticated &amp; Syncing
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Data stats */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-[rgba(16,185,129,0.04)] border border-[rgba(16,185,129,0.08)]">
+                  <Database className="h-3.5 w-3.5 text-[#10b981]" />
+                  <div>
+                    <p className="text-[10px] font-medium text-[#10b981]">Persistent</p>
+                    <p className="text-[9px] text-[#4a4a5a]">Cloud storage</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-[rgba(129,140,248,0.04)] border border-[rgba(129,140,248,0.08)]">
+                  <Zap className="h-3.5 w-3.5 text-[#818cf8]" />
+                  <div>
+                    <p className="text-[10px] font-medium text-[#818cf8]">Realtime</p>
+                    <p className="text-[9px] text-[#4a4a5a]">Live sync</p>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={onSignOut}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[#ef4444] hover:bg-[rgba(239,68,68,0.08)] transition-all duration-200 text-sm"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign Out
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="rounded-xl bg-[rgba(16,185,129,0.02)] border border-[rgba(16,185,129,0.06)] p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Database className="h-4 w-4 text-[#10b981]" />
+                  <span className="text-xs font-medium text-white">Supabase Account</span>
+                </div>
+                <p className="text-[11px] text-[#64748b] leading-relaxed">
+                  Sign in to sync your API keys, sessions, and settings across devices with end-to-end security.
+                </p>
+              </div>
+              <Button
+                onClick={onSignIn}
+                className="w-full bg-gradient-to-r from-[#10b981] to-[#059669] hover:brightness-110 text-white h-9 rounded-lg font-medium text-sm transition-all duration-200 gap-2"
+              >
+                <UserIcon className="h-3.5 w-3.5" />
+                Sign In to Supabase
+              </Button>
+              <button
+                onClick={onResetSupabase}
+                className="w-full text-[10px] text-[#4a4a5a] hover:text-[#64748b] transition-colors text-center py-1"
+              >
+                Change Supabase project configuration
+              </button>
+            </div>
+          )}
+        </div>
+
+        <Separator className="bg-[rgba(255,255,255,0.04)]" />
+
+        {/* GitHub Connection */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Github className="h-4 w-4 text-[#818cf8]" />
@@ -677,7 +883,6 @@ function SettingsView({
           </div>
 
           {githubToken && githubUser ? (
-            /* Connected state — richer UI */
             <div className="space-y-3">
               <div className="glass-card rounded-lg p-3">
                 <div className="flex items-center gap-3">
@@ -700,7 +905,6 @@ function SettingsView({
                 </div>
               </div>
 
-              {/* Quick actions when connected */}
               <div className="grid grid-cols-2 gap-2">
                 <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-[rgba(16,185,129,0.04)] border border-[rgba(16,185,129,0.08)]">
                   <Globe className="h-3.5 w-3.5 text-[#10b981]" />
@@ -727,7 +931,6 @@ function SettingsView({
               </button>
             </div>
           ) : (
-            /* Disconnected state — cleaner CTA */
             <div className="space-y-3">
               <div className="rounded-xl bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.04)] p-3">
                 <div className="flex items-center gap-2 mb-2">

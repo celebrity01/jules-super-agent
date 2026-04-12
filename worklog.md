@@ -94,3 +94,29 @@ Stage Summary:
 - "Add Repository" buttons in Sessions and Sources views when GitHub is connected
 - All UI matches existing dark glassmorphism theme
 - Zero lint errors, dev server running successfully
+
+---
+Task ID: 4
+Agent: Main Agent
+Task: Add Supabase integration + fix nested button bug + improve post-GitHub UI
+
+Work Log:
+- Installed @supabase/supabase-js and @supabase/ssr packages
+- Created src/lib/supabase-client.ts — Browser-side Supabase client with config management (project URL + anon key in localStorage)
+- Created src/lib/supabase-data.ts — Data access layer for auth, API keys, profiles, saved sessions, agent config, and realtime subscriptions
+- Created supabase-schema.sql — Complete SQL schema with profiles, api_keys, saved_sessions, activity_log, agent_config tables + RLS policies + realtime + indexes
+- Created src/components/supabase-setup.tsx — Setup page for configuring Supabase credentials (with skip option)
+- Created src/components/auth-dialog.tsx — Auth dialog with email/password login, signup, and magic link
+- Updated src/app/page.tsx — Step-based flow: Supabase setup → Auth → API key → Dashboard; auto-migrates localStorage to Supabase
+- Updated src/components/dashboard.tsx — Added Supabase user props, auto-saves sessions, realtime subscriptions, bookmarks view, Supabase badge on avatar
+- Updated src/components/sidebar.tsx — Fixed nested button bug (all buttons are siblings), added BookmarksView, enhanced SettingsView with Supabase account section, improved badge display
+- All lint checks pass, dev server compiles without errors
+
+Stage Summary:
+- Supabase integration complete with optional configuration (users can skip)
+- Auth flow: email/password login, signup, magic link
+- Persistent storage: API keys, GitHub tokens, session history in Supabase
+- Realtime subscriptions for session updates
+- Bookmarks view for saved sessions
+- Nested <button> hydration error fixed
+- Post-GitHub UI improved with sync indicators and better badges
