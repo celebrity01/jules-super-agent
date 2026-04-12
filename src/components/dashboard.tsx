@@ -5,14 +5,17 @@ import { JulesSource, JulesSession, listSources, listSessions } from "@/lib/jule
 import { Sidebar } from "@/components/sidebar";
 import { SessionDetail } from "@/components/session-detail";
 import { NewSessionDialog } from "@/components/new-session-dialog";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  Key,
-  LogOut,
-  RefreshCw,
+  Zap,
+  FolderGit2,
+  MessageSquare,
+  Settings,
   Bot,
 } from "lucide-react";
+
+type SidebarView = "sessions" | "sources" | "settings";
 
 interface DashboardProps {
   apiKey: string;
@@ -26,6 +29,7 @@ export function Dashboard({ apiKey, onDisconnect }: DashboardProps) {
   const [isLoadingSessions, setIsLoadingSessions] = useState(true);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [isNewSessionOpen, setIsNewSessionOpen] = useState(false);
+  const [activeView, setActiveView] = useState<SidebarView>("sessions");
 
   const maskedKey = `••••••••${apiKey.slice(-4)}`;
 
@@ -69,51 +73,45 @@ export function Dashboard({ apiKey, onDisconnect }: DashboardProps) {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-white">
-      {/* Top Bar */}
-      <header className="h-12 flex items-center justify-between px-4 border-b bg-white shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-lg bg-[#4285F4] flex items-center justify-center">
-              <Bot className="h-4 w-4 text-white" />
+    <div className="h-screen flex" style={{ background: "#0a0a0f" }}>
+      <TooltipProvider delayDuration={300}>
+        {/* Column 1: Icon Rail */}
+        <div className="w-14 flex flex-col items-center py-4 border-r border-[rgba(255,255,255,0.04)]" style={{ background: "#08080d" }}>
+          {/* Logo */}
+          <div className="mb-6">
+            <div className="h-9 w-9 rounded-xl bg-gradient-agent flex items-center justify-center shadow-lg">
+              <Zap className="h-5 w-5 text-white" />
             </div>
-            <span className="font-semibold text-sm">Jules API Client</span>
           </div>
-          <div className="flex items-center gap-1.5 ml-2">
-            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-xs text-emerald-600 font-medium">Connected</span>
+
+          {/* Nav Icons */}
+          <div className="flex flex-col items-center gap-1 flex-1">
+            <NavItem
+              icon={<MessageSquare className="h-5 w-5" />}
+              label="Sessions"
+              active={activeView === "sessions"}
+              onClick={() => setActiveView("sessions")}
+            />
+            <NavItem
+              icon={<FolderGit2 className="h-5 w-5" />}
+              label="Sources"
+              active={activeView === "sources"}
+              onClick={() => setActiveView("sources")}
+            />
+          </div>
+
+          {/* Bottom Icons */}
+          <div className="flex flex-col items-center gap-1">
+            <NavItem
+              icon={<Settings className="h-5 w-5" />}
+              label="Settings"
+              active={activeView === "settings"}
+              onClick={() => setActiveView("settings")}
+            />
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Key className="h-3 w-3" />
-            <code className="font-mono bg-muted px-1.5 py-0.5 rounded text-[11px]">{maskedKey}</code>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleRefresh}
-            className="h-7 gap-1 text-xs"
-          >
-            <RefreshCw className="h-3 w-3" />
-            Refresh
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onDisconnect}
-            className="h-7 gap-1 text-xs text-destructive hover:text-destructive"
-          >
-            <LogOut className="h-3 w-3" />
-            Disconnect
-          </Button>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <div className="flex flex-1 min-h-0">
-        {/* Sidebar */}
+        {/* Column 2: Sessions Panel */}
         <Sidebar
           sources={sources}
           sessions={sessions}
@@ -123,38 +121,60 @@ export function Dashboard({ apiKey, onDisconnect }: DashboardProps) {
           onSelectSession={setSelectedSessionId}
           onNewSession={() => setIsNewSessionOpen(true)}
           onRefresh={handleRefresh}
+          onDisconnect={onDisconnect}
+          maskedKey={maskedKey}
+          activeView={activeView}
+          onViewChange={setActiveView}
         />
 
-        {/* Main Area */}
+        {/* Column 3: Main Agent View */}
         {selectedSessionId ? (
           <SessionDetail
             sessionId={selectedSessionId}
             apiKey={apiKey}
           />
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground bg-slate-50">
-            <div className="flex flex-col items-center gap-4 max-w-md text-center">
-              <div className="h-16 w-16 rounded-2xl bg-[#4285F4]/10 flex items-center justify-center">
-                <Bot className="h-8 w-8 text-[#4285F4]" />
+          <div className="flex-1 flex flex-col items-center justify-center relative bg-grid-pattern">
+            {/* Gradient orb */}
+            <div
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full opacity-5"
+              style={{
+                background: "radial-gradient(circle, #6366f1 0%, transparent 70%)",
+              }}
+            />
+
+            <div className="flex flex-col items-center gap-6 max-w-md text-center relative z-10 animate-fade-in-up">
+              {/* Agent avatar */}
+              <div className="relative">
+                <div className="h-24 w-24 rounded-3xl bg-gradient-agent flex items-center justify-center shadow-2xl animate-float">
+                  <Bot className="h-12 w-12 text-white" />
+                </div>
+                <div className="absolute -inset-3 rounded-3xl bg-gradient-agent opacity-15 animate-pulse-ring" />
               </div>
+
               <div>
-                <h3 className="text-lg font-medium text-foreground">Select a Session</h3>
-                <p className="text-sm mt-1">
-                  Choose a session from the sidebar to view its details and activities, or create a new session to get started.
+                <h3 className="text-2xl font-bold text-white mb-2">Ready to assist</h3>
+                <p className="text-sm text-[#94a3b8]">
+                  Select a session from the panel or create a new mission to get started with your AI agent.
                 </p>
               </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Badge variant="outline" className="text-xs">
+
+              <div className="flex items-center gap-3">
+                <Badge
+                  className="bg-[rgba(129,140,248,0.08)] text-[#818cf8] border-[rgba(129,140,248,0.15)] hover:bg-[rgba(129,140,248,0.12)] text-xs px-3 py-1"
+                >
                   {sessions.length} sessions
                 </Badge>
-                <Badge variant="outline" className="text-xs">
+                <Badge
+                  className="bg-[rgba(16,185,129,0.08)] text-[#10b981] border-[rgba(16,185,129,0.15)] hover:bg-[rgba(16,185,129,0.12)] text-xs px-3 py-1"
+                >
                   {sources.length} sources
                 </Badge>
               </div>
             </div>
           </div>
         )}
-      </div>
+      </TooltipProvider>
 
       {/* New Session Dialog */}
       <NewSessionDialog
@@ -165,5 +185,41 @@ export function Dashboard({ apiKey, onDisconnect }: DashboardProps) {
         onSessionCreated={handleSessionCreated}
       />
     </div>
+  );
+}
+
+/* Icon Rail Nav Item */
+function NavItem({
+  icon,
+  label,
+  active,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          onClick={onClick}
+          className={`relative h-10 w-10 rounded-xl flex items-center justify-center transition-all duration-200 ${
+            active
+              ? "bg-[rgba(129,140,248,0.12)] text-[#818cf8]"
+              : "text-[#64748b] hover:text-[#94a3b8] hover:bg-[rgba(255,255,255,0.04)]"
+          }`}
+        >
+          {active && (
+            <div className="absolute -left-[5px] top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full bg-[#818cf8]" />
+          )}
+          {icon}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="right" className="bg-[#1a1a2e] text-white border-[rgba(255,255,255,0.06)] text-xs">
+        {label}
+      </TooltipContent>
+    </Tooltip>
   );
 }

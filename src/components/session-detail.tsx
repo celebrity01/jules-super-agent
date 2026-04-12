@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { JulesSession, JulesActivity, getSession, listActivities, approvePlan, sendMessage } from "@/lib/jules-client";
 import { ActivityTimeline } from "@/components/activity-timeline";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   GitBranch,
@@ -15,7 +14,8 @@ import {
   Clock,
   Loader2,
   ExternalLink,
-  Bot,
+  Zap,
+  Github,
 } from "lucide-react";
 
 interface SessionDetailProps {
@@ -39,20 +39,20 @@ function formatFullDate(dateStr: string): string {
   }
 }
 
-function getStateBadgeVariant(state?: string): "default" | "secondary" | "destructive" | "outline" {
+function getStateBadgeConfig(state?: string): { label: string; color: string; bg: string } {
   switch (state) {
     case "COMPLETED":
-      return "default";
+      return { label: "Completed", color: "text-[#10b981]", bg: "bg-[rgba(16,185,129,0.1)] border-[rgba(16,185,129,0.2)]" };
     case "FAILED":
-      return "destructive";
+      return { label: "Failed", color: "text-[#ef4444]", bg: "bg-[rgba(239,68,68,0.1)] border-[rgba(239,68,68,0.2)]" };
+    case "ACTIVE":
+    case "RUNNING":
+      return { label: "Running", color: "text-[#818cf8]", bg: "bg-[rgba(129,140,248,0.1)] border-[rgba(129,140,248,0.2)]" };
+    case "AWAITING_APPROVAL":
+      return { label: "Awaiting Approval", color: "text-[#f59e0b]", bg: "bg-[rgba(245,158,11,0.1)] border-[rgba(245,158,11,0.2)]" };
     default:
-      return "secondary";
+      return { label: "Unknown", color: "text-[#64748b]", bg: "bg-[rgba(100,116,139,0.1)] border-[rgba(100,116,139,0.2)]" };
   }
-}
-
-function getStateLabel(state?: string): string {
-  if (!state) return "Unknown";
-  return state.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function isActiveState(state?: string): boolean {
@@ -147,14 +147,16 @@ export function SessionDetail({ sessionId, apiKey }: SessionDetailProps) {
 
   if (isLoadingSession) {
     return (
-      <div className="flex-1 p-6 space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-4 w-96" />
-        <Separator />
-        <div className="space-y-3">
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-3/4" />
+      <div className="flex-1 p-6 space-y-4" style={{ background: "#0a0a0f" }}>
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-8 w-8 rounded-lg bg-[rgba(255,255,255,0.03)]" />
+          <Skeleton className="h-6 w-48 bg-[rgba(255,255,255,0.03)]" />
+        </div>
+        <Skeleton className="h-4 w-72 bg-[rgba(255,255,255,0.03)]" />
+        <div className="border-t border-[rgba(255,255,255,0.04)] pt-4 space-y-3">
+          <Skeleton className="h-6 w-36 bg-[rgba(255,255,255,0.03)]" />
+          <Skeleton className="h-4 w-full bg-[rgba(255,255,255,0.03)]" />
+          <Skeleton className="h-4 w-3/4 bg-[rgba(255,255,255,0.03)]" />
         </div>
       </div>
     );
@@ -162,8 +164,8 @@ export function SessionDetail({ sessionId, apiKey }: SessionDetailProps) {
 
   if (!session) {
     return (
-      <div className="flex-1 flex items-center justify-center text-muted-foreground">
-        <p>Session not found</p>
+      <div className="flex-1 flex items-center justify-center" style={{ background: "#0a0a0f" }}>
+        <p className="text-[#64748b]">Session not found</p>
       </div>
     );
   }
@@ -172,90 +174,93 @@ export function SessionDetail({ sessionId, apiKey }: SessionDetailProps) {
     ?.replace("sources/", "")
     .replace("https://github.com/", "");
   const branch = session.sourceContext?.githubRepoContext?.startingBranch || "main";
+  const stateConfig = getStateBadgeConfig(session.state);
+  const isCompleted = session.state === "COMPLETED" || session.state === "FAILED";
 
   return (
-    <div className="flex-1 flex flex-col min-h-0">
+    <div className="flex-1 flex flex-col min-h-0" style={{ background: "#0a0a0f" }}>
       {/* Session Header */}
-      <div className="p-4 border-b bg-white">
+      <div className="px-5 py-3.5 border-b border-[rgba(255,255,255,0.04)]" style={{ background: "rgba(12,12,20,0.8)" }}>
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <h2 className="text-lg font-semibold truncate">
+            <div className="flex items-center gap-3 mb-1.5">
+              <div className="h-7 w-7 rounded-lg bg-gradient-agent flex items-center justify-center shrink-0">
+                <Zap className="h-3.5 w-3.5 text-white" />
+              </div>
+              <h2 className="text-base font-semibold text-white truncate">
                 {session.title || "Untitled Session"}
               </h2>
-              <Badge variant={getStateBadgeVariant(session.state)}>
-                {getStateLabel(session.state)}
-              </Badge>
+              <span className={`inline-flex items-center text-[10px] font-medium px-2 py-0.5 rounded-full border ${stateConfig.bg} ${stateConfig.color}`}>
+                {stateConfig.label}
+              </span>
             </div>
             {session.prompt && (
-              <p className="text-sm text-muted-foreground line-clamp-2">
+              <p className="text-xs text-[#64748b] line-clamp-1 ml-10">
                 {session.prompt}
               </p>
             )}
-            <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-4 mt-2 ml-10 text-xs text-[#4a4a5a]">
               {sourceRepo && (
-                <span className="flex items-center gap-1">
-                  <GitBranch className="h-3 w-3" />
-                  {sourceRepo}
+                <span className="flex items-center gap-1.5">
+                  <Github className="h-3 w-3 text-[#64748b]" />
+                  <span className="font-mono">{sourceRepo}</span>
                 </span>
               )}
-              <span className="flex items-center gap-1">
-                <GitBranch className="h-3 w-3" />
-                {branch}
+              <span className="flex items-center gap-1.5">
+                <GitBranch className="h-3 w-3 text-[#64748b]" />
+                <span className="font-mono">{branch}</span>
               </span>
               {session.createTime && (
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
+                <span className="flex items-center gap-1.5">
+                  <Clock className="h-3 w-3 text-[#64748b]" />
                   {formatFullDate(session.createTime)}
                 </span>
               )}
             </div>
           </div>
 
-          {/* Approve Plan Button */}
-          {session.state === "AWAITING_APPROVAL" && (
-            <Button
-              onClick={handleApprove}
-              disabled={isApproving}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shrink-0"
-              size="sm"
-            >
-              {isApproving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <CheckCircle2 className="h-4 w-4" />
-              )}
-              Approve Plan
-            </Button>
-          )}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Approve Plan Button */}
+            {session.state === "AWAITING_APPROVAL" && (
+              <Button
+                onClick={handleApprove}
+                disabled={isApproving}
+                className="bg-gradient-to-r from-[#10b981] to-[#059669] hover:brightness-110 text-white gap-1.5 h-8 rounded-lg text-xs font-medium shadow-md transition-all duration-200"
+                size="sm"
+              >
+                {isApproving ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                )}
+                Approve Plan
+              </Button>
+            )}
 
-          {/* Output Links */}
-          {session.output && (
-            <div className="flex items-center gap-2 shrink-0">
-              {session.output.pullRequestUrl && (
-                <a
-                  href={session.output.pullRequestUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-xs text-[#4285F4] hover:underline"
-                >
-                  View PR <ExternalLink className="h-3 w-3" />
-                </a>
-              )}
-            </div>
-          )}
+            {/* PR Link */}
+            {session.output?.pullRequestUrl && (
+              <a
+                href={session.output.pullRequestUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-[11px] text-[#818cf8] hover:text-[#6366f1] transition-colors px-2.5 py-1.5 rounded-md bg-[rgba(129,140,248,0.06)] border border-[rgba(129,140,248,0.1)] hover:bg-[rgba(129,140,248,0.1)]"
+              >
+                View PR <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+          </div>
         </div>
 
-        {/* Session Output Summary */}
+        {/* Output Summary */}
         {session.output?.summary && (
-          <div className="mt-3 p-3 bg-emerald-50 rounded-lg border border-emerald-100">
-            <p className="text-sm text-emerald-800">{session.output.summary}</p>
+          <div className="mt-3 ml-10 p-3 rounded-lg bg-[rgba(16,185,129,0.04)] border border-[rgba(16,185,129,0.08)]">
+            <p className="text-xs text-[#10b981]">{session.output.summary}</p>
           </div>
         )}
       </div>
 
       {/* Activity Timeline */}
-      <div className="flex-1 min-h-0 overflow-hidden bg-slate-50">
+      <div className="flex-1 min-h-0 overflow-hidden">
         <ActivityTimeline
           activities={activities}
           isLoading={isLoadingActivities}
@@ -263,24 +268,26 @@ export function SessionDetail({ sessionId, apiKey }: SessionDetailProps) {
       </div>
 
       {/* Message Input */}
-      <div className="p-3 border-t bg-white">
-        <div className="flex gap-2">
+      <div className="p-3 border-t border-[rgba(255,255,255,0.04)]" style={{ background: "rgba(12,12,20,0.8)" }}>
+        <div className="flex gap-2 items-center">
           <div className="flex-1 relative">
             <Input
-              placeholder="Send a follow-up message..."
+              placeholder={isCompleted ? "Session completed" : "Send instruction to Jules..."}
               value={messageInput}
               onChange={(e) => setMessageInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              disabled={isSending}
-              className="pr-10"
+              disabled={isSending || isCompleted}
+              className="bg-[#0d1117] border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(129,140,248,0.3)] input-glow h-10 rounded-xl pr-10 text-sm transition-all duration-200 disabled:opacity-50"
             />
-            <Bot className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              <Zap className="h-4 w-4 text-[#2a2a3a]" />
+            </div>
           </div>
           <Button
             onClick={handleSendMessage}
-            disabled={isSending || !messageInput.trim()}
+            disabled={isSending || !messageInput.trim() || isCompleted}
             size="icon"
-            className="bg-[#4285F4] hover:bg-[#3367D6] text-white shrink-0"
+            className="bg-gradient-agent hover:brightness-115 text-white shrink-0 h-10 w-10 rounded-xl shadow-md transition-all duration-200 disabled:opacity-50"
           >
             {isSending ? (
               <Loader2 className="h-4 w-4 animate-spin" />

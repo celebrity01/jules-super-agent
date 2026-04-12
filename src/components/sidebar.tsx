@@ -1,12 +1,29 @@
 "use client";
 
-import { JulesSource, JulesSession } from "@/lib/jules-client";
+import { JulesSource, JulesSession, getSourceDisplayName } from "@/lib/jules-client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { GitBranch, MessageSquare, Plus, RefreshCw, FolderGit2 } from "lucide-react";
+import {
+  GitBranch,
+  MessageSquare,
+  Plus,
+  RefreshCw,
+  FolderGit2,
+  LogOut,
+  Key,
+  Copy,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  Settings,
+  Zap,
+} from "lucide-react";
+import { useState } from "react";
+
+type SidebarView = "sessions" | "sources" | "settings";
 
 interface SidebarProps {
   sources: JulesSource[];
@@ -17,6 +34,10 @@ interface SidebarProps {
   onSelectSession: (sessionId: string) => void;
   onNewSession: () => void;
   onRefresh: () => void;
+  onDisconnect: () => void;
+  maskedKey: string;
+  activeView: SidebarView;
+  onViewChange: (view: SidebarView) => void;
 }
 
 function formatTimeAgo(dateStr: string): string {
@@ -43,25 +64,36 @@ function formatTimeAgo(dateStr: string): string {
   }
 }
 
-function getStateColor(state?: string): string {
+function getStateConfig(state?: string): { color: string; bg: string; label: string } {
   switch (state) {
     case "COMPLETED":
-      return "bg-emerald-500";
+      return { color: "text-[#10b981]", bg: "bg-[rgba(16,185,129,0.1)] border-[rgba(16,185,129,0.2)]", label: "Completed" };
     case "FAILED":
-      return "bg-red-500";
+      return { color: "text-[#ef4444]", bg: "bg-[rgba(239,68,68,0.1)] border-[rgba(239,68,68,0.2)]", label: "Failed" };
     case "ACTIVE":
     case "RUNNING":
-      return "bg-[#4285F4]";
+      return { color: "text-[#818cf8]", bg: "bg-[rgba(129,140,248,0.1)] border-[rgba(129,140,248,0.2)]", label: "Running" };
     case "AWAITING_APPROVAL":
-      return "bg-amber-500";
+      return { color: "text-[#f59e0b]", bg: "bg-[rgba(245,158,11,0.1)] border-[rgba(245,158,11,0.2)]", label: "Awaiting" };
     default:
-      return "bg-slate-400";
+      return { color: "text-[#64748b]", bg: "bg-[rgba(100,116,139,0.1)] border-[rgba(100,116,139,0.2)]", label: "Unknown" };
   }
 }
 
-function getStateLabel(state?: string): string {
-  if (!state) return "Unknown";
-  return state.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+function getStateDotColor(state?: string): string {
+  switch (state) {
+    case "COMPLETED":
+      return "bg-[#10b981]";
+    case "FAILED":
+      return "bg-[#ef4444]";
+    case "ACTIVE":
+    case "RUNNING":
+      return "bg-[#818cf8]";
+    case "AWAITING_APPROVAL":
+      return "bg-[#f59e0b]";
+    default:
+      return "bg-[#64748b]";
+  }
 }
 
 export function Sidebar({
@@ -73,126 +105,350 @@ export function Sidebar({
   onSelectSession,
   onNewSession,
   onRefresh,
+  onDisconnect,
+  maskedKey,
+  activeView,
 }: SidebarProps) {
+  const [sourcesExpanded, setSourcesExpanded] = useState(true);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyKey = () => {
+    navigator.clipboard.writeText(maskedKey);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
-    <div className="w-72 bg-slate-900 text-white flex flex-col h-full border-r border-slate-700">
-      {/* New Session Button */}
-      <div className="p-3">
-        <Button
-          onClick={onNewSession}
-          className="w-full bg-[#4285F4] hover:bg-[#3367D6] text-white gap-2"
-          size="sm"
-        >
-          <Plus className="h-4 w-4" />
-          New Session
-        </Button>
+    <div className="w-[300px] flex flex-col h-full border-r border-[rgba(255,255,255,0.04)]" style={{ background: "#0c0c14" }}>
+      {/* Agent Status Card */}
+      <div className="p-4 border-b border-[rgba(255,255,255,0.04)]">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="h-8 w-8 rounded-lg bg-gradient-agent flex items-center justify-center shadow-md">
+            <Zap className="h-4 w-4 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-white">Jules Agent</span>
+              <div className="flex items-center gap-1">
+                <div className="status-dot status-dot-online" />
+                <span className="text-[10px] text-[#10b981] font-medium">Online</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex-1 flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.04)]">
+            <Key className="h-3 w-3 text-[#64748b]" />
+            <code className="text-[10px] font-mono text-[#64748b] flex-1">{maskedKey}</code>
+          </div>
+          <button
+            onClick={handleCopyKey}
+            className="h-7 w-7 rounded-md flex items-center justify-center text-[#64748b] hover:text-[#94a3b8] hover:bg-[rgba(255,255,255,0.04)] transition-colors"
+          >
+            {copied ? <Check className="h-3 w-3 text-[#10b981]" /> : <Copy className="h-3 w-3" />}
+          </button>
+        </div>
       </div>
 
-      <ScrollArea className="flex-1">
-        {/* Sources Section */}
-        <div className="px-3 pb-2">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-              <FolderGit2 className="h-3.5 w-3.5" />
-              Sources
-            </h3>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-5 w-5 text-slate-400 hover:text-white hover:bg-slate-800"
-              onClick={onRefresh}
-            >
-              <RefreshCw className="h-3 w-3" />
-            </Button>
+      <ScrollArea className="flex-1 dark-scrollbar">
+        {activeView === "sessions" && (
+          <SessionsView
+            sessions={sessions}
+            sources={sources}
+            selectedSessionId={selectedSessionId}
+            isLoadingSessions={isLoadingSessions}
+            isLoadingSources={isLoadingSources}
+            onSelectSession={onSelectSession}
+            onNewSession={onNewSession}
+            onRefresh={onRefresh}
+            sourcesExpanded={sourcesExpanded}
+            onToggleSources={() => setSourcesExpanded(!sourcesExpanded)}
+          />
+        )}
+        {activeView === "sources" && (
+          <SourcesView
+            sources={sources}
+            isLoadingSources={isLoadingSources}
+            onRefresh={onRefresh}
+          />
+        )}
+        {activeView === "settings" && (
+          <SettingsView
+            onDisconnect={onDisconnect}
+            onRefresh={onRefresh}
+          />
+        )}
+      </ScrollArea>
+
+      {/* Bottom: New Session + Disconnect */}
+      <div className="p-3 border-t border-[rgba(255,255,255,0.04)] space-y-2">
+        {activeView === "sessions" && (
+          <Button
+            onClick={onNewSession}
+            className="w-full bg-gradient-agent hover:brightness-115 text-white gap-2 h-9 rounded-lg font-medium text-sm transition-all duration-200"
+            size="sm"
+          >
+            <Plus className="h-4 w-4" />
+            New Mission
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* Sessions View */
+function SessionsView({
+  sessions,
+  sources,
+  selectedSessionId,
+  isLoadingSessions,
+  isLoadingSources,
+  onSelectSession,
+  onNewSession,
+  onRefresh,
+  sourcesExpanded,
+  onToggleSources,
+}: {
+  sessions: JulesSession[];
+  sources: JulesSource[];
+  selectedSessionId: string | null;
+  isLoadingSessions: boolean;
+  isLoadingSources: boolean;
+  onSelectSession: (id: string) => void;
+  onNewSession: () => void;
+  onRefresh: () => void;
+  sourcesExpanded: boolean;
+  onToggleSources: () => void;
+}) {
+  return (
+    <div className="py-2">
+      {/* Connected Repos */}
+      <div className="px-3 mb-2">
+        <button
+          onClick={onToggleSources}
+          className="flex items-center justify-between w-full group"
+        >
+          <div className="flex items-center gap-1.5">
+            {sourcesExpanded ? (
+              <ChevronDown className="h-3 w-3 text-[#64748b]" />
+            ) : (
+              <ChevronRight className="h-3 w-3 text-[#64748b]" />
+            )}
+            <FolderGit2 className="h-3.5 w-3.5 text-[#64748b]" />
+            <span className="text-[10px] font-semibold text-[#64748b] uppercase tracking-wider">Connected Repos</span>
           </div>
+          <Badge className="h-4 px-1.5 text-[9px] bg-[rgba(129,140,248,0.08)] text-[#818cf8] border-[rgba(129,140,248,0.12)] hover:bg-[rgba(129,140,248,0.12)]">
+            {sources.length}
+          </Badge>
+        </button>
 
-          {isLoadingSources ? (
-            <div className="space-y-2">
-              <Skeleton className="h-8 bg-slate-800" />
-              <Skeleton className="h-8 bg-slate-800" />
-            </div>
-          ) : sources.length === 0 ? (
-            <p className="text-xs text-slate-500 px-2">No sources connected</p>
-          ) : (
-            <div className="space-y-1">
-              {sources.map((source) => {
-                const repoUri = source.githubRepoContext?.repoUri || source.name;
-                const parts = repoUri.replace("https://github.com/", "").split("/");
-                const displayName = parts.length >= 2 ? `${parts[0]}/${parts[1]}` : repoUri.split("/").pop() || source.name;
-
-                return (
+        {sourcesExpanded && (
+          <div className="mt-1.5 ml-1">
+            {isLoadingSources ? (
+              <div className="space-y-1.5">
+                <Skeleton className="h-6 bg-[rgba(255,255,255,0.03)]" />
+                <Skeleton className="h-6 bg-[rgba(255,255,255,0.03)]" />
+              </div>
+            ) : sources.length === 0 ? (
+              <p className="text-[10px] text-[#4a4a5a] px-2 py-1">No sources connected</p>
+            ) : (
+              <div className="space-y-0.5">
+                {sources.map((source) => (
                   <div
                     key={source.name}
-                    className="flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-slate-300 hover:bg-slate-800 transition-colors"
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-md text-[#94a3b8] hover:bg-[rgba(255,255,255,0.03)] hover:text-white transition-all duration-200"
                   >
-                    <GitBranch className="h-3.5 w-3.5 text-slate-500 shrink-0" />
-                    <span className="truncate text-xs font-mono">{displayName}</span>
+                    <GitBranch className="h-3 w-3 text-[#4a4a5a] shrink-0" />
+                    <span className="truncate text-xs font-mono">{getSourceDisplayName(source)}</span>
                   </div>
-                );
-              })}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <Separator className="bg-[rgba(255,255,255,0.04)] mx-3 my-2" />
+
+      {/* Sessions */}
+      <div className="px-3">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1.5">
+            <MessageSquare className="h-3.5 w-3.5 text-[#64748b]" />
+            <span className="text-[10px] font-semibold text-[#64748b] uppercase tracking-wider">Sessions</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Badge className="h-4 px-1.5 text-[9px] bg-[rgba(129,140,248,0.08)] text-[#818cf8] border-[rgba(129,140,248,0.12)] hover:bg-[rgba(129,140,248,0.12)]">
+              {sessions.length}
+            </Badge>
+            <button
+              onClick={onRefresh}
+              className="h-5 w-5 rounded flex items-center justify-center text-[#4a4a5a] hover:text-[#94a3b8] hover:bg-[rgba(255,255,255,0.04)] transition-colors"
+            >
+              <RefreshCw className="h-3 w-3" />
+            </button>
+          </div>
         </div>
 
-        <Separator className="bg-slate-700 mx-3" />
+        {isLoadingSessions ? (
+          <div className="space-y-2">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-16 bg-[rgba(255,255,255,0.03)] rounded-lg" />
+            ))}
+          </div>
+        ) : sessions.length === 0 ? (
+          <div className="text-center py-8">
+            <MessageSquare className="h-8 w-8 text-[#2a2a3a] mx-auto mb-2" />
+            <p className="text-xs text-[#4a4a5a]">No sessions yet</p>
+            <Button
+              onClick={onNewSession}
+              variant="ghost"
+              size="sm"
+              className="mt-2 text-[#818cf8] hover:text-[#6366f1] hover:bg-[rgba(129,140,248,0.08)] text-xs h-7"
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              New Mission
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {sessions.map((session) => {
+              const sessionId = session.name.split("/").pop() || session.name;
+              const isSelected = selectedSessionId === sessionId;
+              const stateConfig = getStateConfig(session.state);
 
-        {/* Sessions Section */}
-        <div className="px-3 py-2">
-          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 mb-2">
-            <MessageSquare className="h-3.5 w-3.5" />
-            Sessions
-          </h3>
-
-          {isLoadingSessions ? (
-            <div className="space-y-2">
-              <Skeleton className="h-16 bg-slate-800" />
-              <Skeleton className="h-16 bg-slate-800" />
-              <Skeleton className="h-16 bg-slate-800" />
-            </div>
-          ) : sessions.length === 0 ? (
-            <p className="text-xs text-slate-500 px-2">No sessions yet</p>
-          ) : (
-            <div className="space-y-1">
-              {sessions.map((session) => {
-                const sessionId = session.name.split("/").pop() || session.name;
-                const isSelected = selectedSessionId === sessionId;
-
-                return (
-                  <button
-                    key={session.name}
-                    onClick={() => onSelectSession(sessionId)}
-                    className={`w-full text-left px-2.5 py-2 rounded-lg transition-colors ${
-                      isSelected
-                        ? "bg-[#4285F4]/20 text-white border border-[#4285F4]/30"
-                        : "hover:bg-slate-800 text-slate-300 border border-transparent"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="text-sm font-medium truncate leading-tight">
-                        {session.title || "Untitled Session"}
+              return (
+                <button
+                  key={session.name}
+                  onClick={() => onSelectSession(sessionId)}
+                  className={`w-full text-left px-3 py-2.5 rounded-lg transition-all duration-200 ${
+                    isSelected
+                      ? "bg-[rgba(129,140,248,0.08)] border-l-2 border-l-[#818cf8]"
+                      : "hover:bg-[rgba(255,255,255,0.03)] border-l-2 border-l-transparent"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-sm font-medium text-white truncate leading-tight">
+                      {session.title || "Untitled Session"}
+                    </span>
+                    <div className={`h-2 w-2 rounded-full shrink-0 mt-1.5 ${getStateDotColor(session.state)}`} />
+                  </div>
+                  {/* Status pill */}
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <span className={`inline-flex items-center text-[9px] font-medium px-1.5 py-0.5 rounded border ${stateConfig.bg} ${stateConfig.color}`}>
+                      {stateConfig.label}
+                    </span>
+                    {session.createTime && (
+                      <span className="text-[10px] text-[#4a4a5a]">
+                        {formatTimeAgo(session.createTime)}
                       </span>
-                      <div className={`h-2 w-2 rounded-full shrink-0 mt-1.5 ${getStateColor(session.state)}`} />
-                    </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge
-                        variant="secondary"
-                        className="text-[10px] px-1.5 py-0 h-4 bg-slate-700 text-slate-400 hover:bg-slate-700"
-                      >
-                        {getStateLabel(session.state)}
-                      </Badge>
-                      {session.createTime && (
-                        <span className="text-[10px] text-slate-500">
-                          {formatTimeAgo(session.createTime)}
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
+                    )}
+                  </div>
+                  {/* Prompt preview */}
+                  {session.prompt && (
+                    <p className="text-[11px] text-[#4a4a5a] mt-1.5 truncate leading-relaxed">
+                      {session.prompt}
+                    </p>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* Sources View */
+function SourcesView({
+  sources,
+  isLoadingSources,
+  onRefresh,
+}: {
+  sources: JulesSource[];
+  isLoadingSources: boolean;
+  onRefresh: () => void;
+}) {
+  return (
+    <div className="p-4">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-xs font-semibold text-[#64748b] uppercase tracking-wider">Connected Repositories</h3>
+        <button
+          onClick={onRefresh}
+          className="h-6 w-6 rounded-md flex items-center justify-center text-[#4a4a5a] hover:text-[#94a3b8] hover:bg-[rgba(255,255,255,0.04)] transition-colors"
+        >
+          <RefreshCw className="h-3 w-3" />
+        </button>
+      </div>
+
+      {isLoadingSources ? (
+        <div className="space-y-3">
+          {[1, 2].map((i) => (
+            <Skeleton key={i} className="h-12 bg-[rgba(255,255,255,0.03)] rounded-lg" />
+          ))}
         </div>
-      </ScrollArea>
+      ) : sources.length === 0 ? (
+        <div className="text-center py-8">
+          <FolderGit2 className="h-8 w-8 text-[#2a2a3a] mx-auto mb-2" />
+          <p className="text-xs text-[#4a4a5a]">No sources connected</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {sources.map((source) => (
+            <div
+              key={source.name}
+              className="glass-card-hover rounded-lg px-3 py-2.5"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-md bg-[rgba(129,140,248,0.08)] flex items-center justify-center shrink-0">
+                  <GitBranch className="h-4 w-4 text-[#818cf8]" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-mono text-white truncate">{getSourceDisplayName(source)}</p>
+                  <p className="text-[10px] text-[#4a4a5a] truncate">{source.id || source.name}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* Settings View */
+function SettingsView({
+  onDisconnect,
+  onRefresh,
+}: {
+  onDisconnect: () => void;
+  onRefresh: () => void;
+}) {
+  return (
+    <div className="p-4">
+      <h3 className="text-xs font-semibold text-[#64748b] uppercase tracking-wider mb-4">Settings</h3>
+
+      <div className="space-y-3">
+        <button
+          onClick={onRefresh}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#94a3b8] hover:text-white hover:bg-[rgba(255,255,255,0.03)] transition-all duration-200"
+        >
+          <RefreshCw className="h-4 w-4" />
+          <span className="text-sm">Refresh Data</span>
+        </button>
+
+        <Separator className="bg-[rgba(255,255,255,0.04)]" />
+
+        <button
+          onClick={onDisconnect}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#ef4444] hover:bg-[rgba(239,68,68,0.08)] transition-all duration-200"
+        >
+          <LogOut className="h-4 w-4" />
+          <span className="text-sm">Disconnect</span>
+        </button>
+      </div>
     </div>
   );
 }

@@ -2,7 +2,12 @@
 
 export interface JulesSource {
   name: string;
+  id?: string;
   displayName?: string;
+  githubRepo?: {
+    owner: string;
+    repo: string;
+  };
   githubRepoContext?: {
     repoUri?: string;
     defaultBranch?: string;
@@ -55,6 +60,23 @@ const headers = (apiKey: string) => ({
   "X-Jules-Api-Key": apiKey,
   "Content-Type": "application/json",
 });
+
+export function getSourceDisplayName(source: JulesSource): string {
+  if (source.githubRepo) {
+    return `${source.githubRepo.owner}/${source.githubRepo.repo}`;
+  }
+  // Fallback: try to parse from name (e.g., "sources/github/bobalover/boba")
+  if (source.name) {
+    const parts = source.name.split("/");
+    // Find "github" in the parts and take the next two as owner/repo
+    const githubIndex = parts.indexOf("github");
+    if (githubIndex >= 0 && parts.length > githubIndex + 2) {
+      return `${parts[githubIndex + 1]}/${parts[githubIndex + 2]}`;
+    }
+  }
+  // Last resort: use the last segment
+  return source.name.split("/").pop() || source.name;
+}
 
 export async function listSources(apiKey: string): Promise<{ sources?: JulesSource[] }> {
   const res = await fetch("/api/jules/sources", {

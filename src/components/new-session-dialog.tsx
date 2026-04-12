@@ -7,7 +7,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,8 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
-import { JulesSource, createSession } from "@/lib/jules-client";
+import { Loader2, Zap, Target, GitBranch, Rocket, GitPullRequest, Sliders } from "lucide-react";
+import { JulesSource, createSession, getSourceDisplayName } from "@/lib/jules-client";
 
 interface NewSessionDialogProps {
   open: boolean;
@@ -50,11 +49,11 @@ export function NewSessionDialog({
 
   const handleCreate = async () => {
     if (!prompt.trim()) {
-      setError("Prompt is required");
+      setError("Objective is required");
       return;
     }
     if (!selectedSource) {
-      setError("Please select a source");
+      setError("Please select a target repository");
       return;
     }
 
@@ -79,7 +78,7 @@ export function NewSessionDialog({
       onSessionCreated(sessionId);
       handleClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create session");
+      setError(err instanceof Error ? err.message : "Failed to create mission");
     } finally {
       setIsLoading(false);
     }
@@ -98,46 +97,63 @@ export function NewSessionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg bg-[#0c0c14] border-[rgba(255,255,255,0.06)] text-white shadow-2xl">
         <DialogHeader>
-          <DialogTitle>Create New Session</DialogTitle>
-          <DialogDescription>
-            Start a new Jules session to automate a development task
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <div className="h-7 w-7 rounded-lg bg-gradient-agent flex items-center justify-center">
+              <Target className="h-3.5 w-3.5 text-white" />
+            </div>
+            <span className="gradient-text">New Mission</span>
+          </DialogTitle>
+          <DialogDescription className="text-[#64748b]">
+            Launch a new AI-powered development mission
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
+          {/* Mission Title */}
           <div className="space-y-2">
-            <Label htmlFor="session-title">Title (optional)</Label>
+            <Label htmlFor="mission-title" className="text-xs text-[#94a3b8] font-medium">
+              Mission Title
+            </Label>
             <Input
-              id="session-title"
+              id="mission-title"
               placeholder="e.g., Fix authentication bug"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               disabled={isLoading}
+              className="bg-[#0d1117] border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(129,140,248,0.3)] input-glow h-10 rounded-lg text-sm transition-all duration-200"
             />
           </div>
 
+          {/* Objective */}
           <div className="space-y-2">
-            <Label htmlFor="session-prompt">Prompt *</Label>
+            <Label htmlFor="mission-objective" className="text-xs text-[#94a3b8] font-medium">
+              Objective *
+            </Label>
             <Textarea
-              id="session-prompt"
-              placeholder="Describe what you want Jules to do..."
+              id="mission-objective"
+              placeholder="Describe what you want Jules to accomplish..."
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               disabled={isLoading}
               rows={4}
+              className="bg-[#0d1117] border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(129,140,248,0.3)] input-glow rounded-lg text-sm transition-all duration-200 resize-none"
             />
           </div>
 
+          {/* Target Repository */}
           <div className="space-y-2">
-            <Label>Source Repository *</Label>
+            <Label className="text-xs text-[#94a3b8] font-medium flex items-center gap-1.5">
+              <GitBranch className="h-3 w-3" />
+              Target Repository *
+            </Label>
             <Select
               value={selectedSource}
               onValueChange={setSelectedSource}
               disabled={isLoading || sources.length === 0}
             >
-              <SelectTrigger>
+              <SelectTrigger className="bg-[#0d1117] border-[rgba(255,255,255,0.06)] text-white h-10 rounded-lg focus:border-[rgba(129,140,248,0.3)] transition-all duration-200">
                 <SelectValue
                   placeholder={
                     sources.length === 0
@@ -146,58 +162,74 @@ export function NewSessionDialog({
                   }
                 />
               </SelectTrigger>
-              <SelectContent>
-                {sources.map((source) => {
-                  const repoUri =
-                    source.githubRepoContext?.repoUri || source.name;
-                  const parts = repoUri
-                    .replace("https://github.com/", "")
-                    .split("/");
-                  const displayName =
-                    parts.length >= 2
-                      ? `${parts[0]}/${parts[1]}`
-                      : repoUri.split("/").pop() || source.name;
-
-                  return (
-                    <SelectItem key={source.name} value={source.name}>
-                      {displayName}
-                    </SelectItem>
-                  );
-                })}
+              <SelectContent className="bg-[#12121a] border-[rgba(255,255,255,0.06)]">
+                {sources.map((source) => (
+                  <SelectItem
+                    key={source.name}
+                    value={source.name}
+                    className="text-white focus:bg-[rgba(129,140,248,0.08)] focus:text-white"
+                  >
+                    <span className="font-mono">{getSourceDisplayName(source)}</span>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
+          {/* Branch */}
           <div className="space-y-2">
-            <Label htmlFor="starting-branch">Starting Branch</Label>
+            <Label htmlFor="branch" className="text-xs text-[#94a3b8] font-medium">
+              Branch
+            </Label>
             <Input
-              id="starting-branch"
+              id="branch"
               placeholder="main"
               value={startingBranch}
               onChange={(e) => setStartingBranch(e.target.value)}
               disabled={isLoading}
+              className="bg-[#0d1117] border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(129,140,248,0.3)] input-glow h-10 rounded-lg text-sm font-mono transition-all duration-200"
             />
           </div>
 
+          {/* Mode Toggle Cards */}
           <div className="space-y-2">
-            <Label>Automation Mode</Label>
-            <Select
-              value={automationMode}
-              onValueChange={setAutomationMode}
-              disabled={isLoading}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None (Manual)</SelectItem>
-                <SelectItem value="AUTO_CREATE_PR">Auto Create PR</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label className="text-xs text-[#94a3b8] font-medium flex items-center gap-1.5">
+              <Sliders className="h-3 w-3" />
+              Mode
+            </Label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setAutomationMode("none")}
+                disabled={isLoading}
+                className={`relative flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all duration-200 ${
+                  automationMode === "none"
+                    ? "bg-[rgba(129,140,248,0.08)] border-[rgba(129,140,248,0.2)] text-[#818cf8]"
+                    : "bg-[rgba(255,255,255,0.02)] border-[rgba(255,255,255,0.04)] text-[#64748b] hover:border-[rgba(255,255,255,0.08)] hover:text-[#94a3b8]"
+                }`}
+              >
+                <Sliders className="h-4 w-4" />
+                <span className="text-[11px] font-medium">Manual</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setAutomationMode("AUTO_CREATE_PR")}
+                disabled={isLoading}
+                className={`relative flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all duration-200 ${
+                  automationMode === "AUTO_CREATE_PR"
+                    ? "bg-[rgba(129,140,248,0.08)] border-[rgba(129,140,248,0.2)] text-[#818cf8]"
+                    : "bg-[rgba(255,255,255,0.02)] border-[rgba(255,255,255,0.04)] text-[#64748b] hover:border-[rgba(255,255,255,0.08)] hover:text-[#94a3b8]"
+                }`}
+              >
+                <GitPullRequest className="h-4 w-4" />
+                <span className="text-[11px] font-medium">Auto PR</span>
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-center justify-between">
-            <Label htmlFor="plan-approval" className="cursor-pointer">
+          {/* Plan Approval Toggle */}
+          <div className="flex items-center justify-between px-1">
+            <Label htmlFor="plan-approval" className="text-xs text-[#94a3b8] font-medium cursor-pointer">
               Require Plan Approval
             </Label>
             <Switch
@@ -205,35 +237,46 @@ export function NewSessionDialog({
               checked={requirePlanApproval}
               onCheckedChange={setRequirePlanApproval}
               disabled={isLoading}
+              className="data-[state=checked]:bg-[#818cf8]"
             />
           </div>
 
+          {/* Error */}
           {error && (
-            <div className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            <div className="rounded-lg bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.15)] px-3 py-2 text-sm text-[#f87171] animate-fade-in">
               {error}
             </div>
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={isLoading}>
+        {/* Footer */}
+        <div className="flex items-center gap-2 pt-2 border-t border-[rgba(255,255,255,0.04)]">
+          <Button
+            variant="ghost"
+            onClick={handleClose}
+            disabled={isLoading}
+            className="flex-1 text-[#64748b] hover:text-white hover:bg-[rgba(255,255,255,0.04)] h-10 rounded-lg"
+          >
             Cancel
           </Button>
           <Button
             onClick={handleCreate}
             disabled={isLoading || !prompt.trim() || !selectedSource}
-            className="bg-[#4285F4] hover:bg-[#3367D6] text-white"
+            className="flex-1 bg-gradient-agent hover:brightness-115 text-white h-10 rounded-lg font-medium shadow-md transition-all duration-200 disabled:opacity-50"
           >
             {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating...
-              </>
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Launching...</span>
+              </div>
             ) : (
-              "Create Session"
+              <div className="flex items-center gap-2">
+                <Rocket className="h-4 w-4" />
+                <span>Launch Mission</span>
+              </div>
             )}
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
