@@ -69,6 +69,35 @@ export function GlassAddRepoModal({
     }
   };
 
+  const handleConnect = async () => {
+    if (!connectUrl.trim()) { setError("Repository URL is required"); return; }
+
+    // Validate it's a GitHub URL
+    const githubPattern = /^https?:\/\/github\.com\/([^\/]+)\/([^\/]+)/i;
+    const match = connectUrl.trim().match(githubPattern);
+    if (!match) { setError("Please enter a valid GitHub repository URL (https://github.com/user/repo)"); return; }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Connect the repo as a Jules source via the GitHub repos API
+      const res = await fetch("/api/github/repos", {
+        headers: { "Content-Type": "application/json", "x-github-token": githubToken },
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to verify repository");
+      }
+      onRepoCreated();
+      handleClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to connect repository");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleClose = () => {
     setRepoName(""); setDescription(""); setIsPrivate(false); setAddReadme(true);
     setConnectUrl(""); setError(null);
@@ -209,8 +238,8 @@ export function GlassAddRepoModal({
             Cancel
           </button>
           <button
-            onClick={tab === "create" ? handleCreate : handleClose}
-            disabled={isLoading || (tab === "create" && !repoName.trim())}
+            onClick={tab === "create" ? handleCreate : handleConnect}
+            disabled={isLoading || (tab === "create" && !repoName.trim()) || (tab === "connect" && !connectUrl.trim())}
             className={`flex-[2] flex items-center justify-center gap-3 py-4 rounded-2xl font-bold text-sm active:scale-95 transition-all disabled:opacity-50 ${
               tab === "create"
                 ? "bg-[#00E676] text-[#071115] shadow-[0_10px_30px_rgba(0,230,118,0.3)]"

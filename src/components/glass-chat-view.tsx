@@ -260,7 +260,7 @@ export function GlassChatView({ sessionId, apiKey, onBack, onAddRepo }: GlassCha
       </div>
 
       {/* Input */}
-      <div className="fixed bottom-0 left-0 right-0 glass-surface p-4 glass-border-t z-30 pb-safe">
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-3xl glass-surface p-4 glass-border-t z-30 pb-safe">
         <div className="flex gap-3 items-end max-w-3xl mx-auto">
           <div className="flex-1 bg-white/5 border border-white/10 px-5 py-3 flex items-center rounded-2xl focus-within:border-[#00E5FF]/40 transition-all shadow-inner">
             <textarea

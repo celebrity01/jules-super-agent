@@ -33,7 +33,6 @@ import {
   Bell,
   Cpu,
   Zap,
-  Loader2,
 } from "lucide-react";
 
 const STORAGE_KEY = "jules-api-key";
@@ -364,7 +363,7 @@ export default function Home() {
 
       {/* Bottom Nav */}
       {showBottomNav && (
-        <nav className="fixed bottom-0 left-0 right-0 h-20 glass-surface flex items-center justify-around z-50 px-2 pb-safe glass-border-t md:max-w-3xl md:mx-auto">
+        <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-20 glass-surface flex items-center justify-around z-50 px-2 pb-safe glass-border-t">
           {[
             { id: "threads" as ViewType, icon: MessageSquare, label: "Threads" },
             { id: "agents" as ViewType, icon: Bot, label: "Agents" },

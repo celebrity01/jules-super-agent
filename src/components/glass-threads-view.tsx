@@ -9,6 +9,7 @@ import {
   Search,
   FolderPlus,
   Plus,
+  RefreshCw,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -66,6 +67,7 @@ export function GlassThreadsView({
   onSelectSession,
   onNewMission,
   onAddRepo,
+  onRefresh,
 }: ThreadsViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -81,6 +83,9 @@ export function GlassThreadsView({
           Jules lite
         </h1>
         <div className="flex gap-1.5 items-center">
+          <button onClick={onRefresh} className="p-2.5 text-[#E0F7FA] active:scale-90 transition-all rounded-full hover:bg-white/10" title="Refresh">
+            <RefreshCw size={22} />
+          </button>
           <button className="p-2.5 text-[#E0F7FA] active:scale-90 transition-all rounded-full hover:bg-white/10" title="Search">
             <Search size={22} />
           </button>

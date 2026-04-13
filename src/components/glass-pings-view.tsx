@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import {
   Bell,
   Search,
@@ -26,47 +27,49 @@ function formatTime(dateStr: string): string {
 
 export function GlassPingsView({ sessions, onAddRepo }: GlassPingsViewProps) {
   // Derive pings from session states
-  const pings = sessions
-    .map((s) => {
-      const sessionId = s.name.split("/").pop() || s.name;
-      if (s.state === "COMPLETED") {
-        return {
-          time: s.createTime ? formatTime(s.createTime) : "--:--:--",
-          type: "success" as const,
-          msg: `Mission Complete: ${s.title || sessionId}`,
-        };
-      }
-      if (s.state === "FAILED") {
-        return {
-          time: s.createTime ? formatTime(s.createTime) : "--:--:--",
-          type: "error" as const,
-          msg: `Mission Failed: ${s.title || sessionId}`,
-        };
-      }
-      if (s.state === "AWAITING_APPROVAL") {
-        return {
-          time: s.createTime ? formatTime(s.createTime) : "--:--:--",
-          type: "warning" as const,
-          msg: `Approval Required: ${s.title || sessionId}`,
-        };
-      }
-      if (s.state === "ACTIVE" || s.state === "RUNNING") {
-        return {
-          time: s.createTime ? formatTime(s.createTime) : "--:--:--",
-          type: "info" as const,
-          msg: `Mission Active: ${s.title || sessionId}`,
-        };
-      }
-      return null;
-    })
-    .filter(Boolean) as Array<{ time: string; type: "success" | "error" | "warning" | "info"; msg: string }>;
+  const pings = useMemo(() =>
+    sessions
+      .map((s) => {
+        const sessionId = s.name.split("/").pop() || s.name;
+        if (s.state === "COMPLETED") {
+          return {
+            time: s.createTime ? formatTime(s.createTime) : "--:--:--",
+            type: "success" as const,
+            msg: `Mission Complete: ${s.title || sessionId}`,
+          };
+        }
+        if (s.state === "FAILED") {
+          return {
+            time: s.createTime ? formatTime(s.createTime) : "--:--:--",
+            type: "error" as const,
+            msg: `Mission Failed: ${s.title || sessionId}`,
+          };
+        }
+        if (s.state === "AWAITING_APPROVAL") {
+          return {
+            time: s.createTime ? formatTime(s.createTime) : "--:--:--",
+            type: "warning" as const,
+            msg: `Approval Required: ${s.title || sessionId}`,
+          };
+        }
+        if (s.state === "ACTIVE" || s.state === "RUNNING") {
+          return {
+            time: s.createTime ? formatTime(s.createTime) : "--:--:--",
+            type: "info" as const,
+            msg: `Mission Active: ${s.title || sessionId}`,
+          };
+        }
+        return null;
+      })
+      .filter(Boolean) as Array<{ time: string; type: "success" | "error" | "warning" | "info"; msg: string }>,
+    [sessions]
+  );
 
-  // Add some system pings
-  const systemPings = [
-    { time: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }), type: "info" as const, msg: "System initialized — Jules Lite Agent online" },
-  ];
+  const systemPings = useMemo(() => [
+    { time: "--:--:--", type: "info" as const, msg: "System initialized — Jules Lite Agent online" },
+  ], []);
 
-  const allPings = [...systemPings, ...pings];
+  const allPings = useMemo(() => [...systemPings, ...pings], [systemPings, pings]);
 
   return (
     <div className="flex flex-col h-full">

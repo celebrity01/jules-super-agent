@@ -10,7 +10,6 @@ import {
   ExternalLink,
   GitBranch,
 } from "lucide-react";
-import { getSupabaseAccessToken } from "@/lib/supabase-client";
 
 interface GlassMCPViewProps {
   sources: JulesSource[];

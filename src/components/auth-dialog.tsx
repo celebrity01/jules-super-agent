@@ -165,13 +165,13 @@ export function AuthDialog({ open, onOpenChange, onAuthSuccess }: AuthDialogProp
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md glass-heavy border-white/[0.08] text-[#E0F7FA] shadow-2xl">
+      <DialogContent className="sm:max-w-md glass-surface-heavy border-white/[0.08] text-[#E0F7FA] shadow-2xl">
         <DialogHeader>
           <div className="flex items-center gap-2 text-lg font-semibold">
             <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-[#00E5FF] to-[#00E676] flex items-center justify-center">
               <Zap className="h-3.5 w-3.5 text-[#03080a]" />
             </div>
-            <span className="gradient-text-cyan">
+            <span className="bg-gradient-to-r from-[#00E5FF] to-[#00E676] bg-clip-text text-transparent">
               {mode === "login" ? "Welcome Back" : mode === "signup" ? "Create Account" : "Magic Link Login"}
             </span>
           </div>
@@ -269,7 +269,7 @@ export function AuthDialog({ open, onOpenChange, onAuthSuccess }: AuthDialogProp
           <Button
             onClick={handleSubmit}
             disabled={isLoading || !email.trim() || (mode !== "magic-link" && !password.trim())}
-            className="w-full bg-gradient-to-r from-[#00E5FF] to-[#00E676] text-[#03080a] h-10 rounded-xl font-semibold disabled:opacity-50 press-scale"
+            className="w-full bg-gradient-to-r from-[#00E5FF] to-[#00E676] text-[#03080a] h-10 rounded-xl font-semibold disabled:opacity-50 active:scale-[0.98] transition-transform"
           >
             {isLoading ? (
               <div className="flex items-center gap-2">
