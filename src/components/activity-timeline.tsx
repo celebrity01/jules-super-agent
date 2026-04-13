@@ -276,13 +276,13 @@ function ActivityContent({
       );
     case "USER_MESSAGE":
       return (
-        <div className="inline-block bubble-user px-3.5 py-2">
+        <div className="wa-bubble-out px-3.5 py-2">
           <p className="text-sm text-[#e2e8f0] leading-relaxed">{activity.description}</p>
         </div>
       );
     default:
       return (
-        <div className="bubble-agent px-3.5 py-2">
+        <div className="wa-bubble-in px-3.5 py-2">
           {activity.description && (
             <p className="text-sm text-[#94a3b8] leading-relaxed">{activity.description}</p>
           )}

@@ -178,9 +178,9 @@ export function SessionDetail({ sessionId, apiKey }: SessionDetailProps) {
   const isCompleted = session.state === "COMPLETED" || session.state === "FAILED";
 
   return (
-    <div className="flex-1 flex flex-col min-h-0" style={{ background: "#0a0a0f" }}>
+    <div className="wa-main">
       {/* Session Header */}
-      <div className="px-5 py-3.5 border-b border-[rgba(255,255,255,0.04)] relative" style={{ background: "rgba(12,12,20,0.8)" }}>
+      <div className="wa-header relative">
         {/* Gradient top border */}
         <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent 0%, rgba(129, 140, 248, 0.2) 50%, transparent 100%)" }} />
         <div className="flex items-start justify-between gap-4">
@@ -270,7 +270,7 @@ export function SessionDetail({ sessionId, apiKey }: SessionDetailProps) {
       </div>
 
       {/* Message Input */}
-      <div className="p-3 border-t border-[rgba(255,255,255,0.04)] relative" style={{ background: "rgba(12,12,20,0.8)" }}>
+      <div className="wa-chat-input-container relative">
         <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent 0%, rgba(129, 140, 248, 0.1) 50%, transparent 100%)" }} />
         <div className="flex gap-2 items-center">
           <div className="flex-1 relative">
@@ -280,7 +280,7 @@ export function SessionDetail({ sessionId, apiKey }: SessionDetailProps) {
               onChange={(e) => setMessageInput(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={isSending || isCompleted}
-              className="input-refined text-white placeholder:text-[#3a3a4a] h-10 rounded-2xl pr-10 text-sm disabled:opacity-50"
+              className="wa-chat-input h-10 rounded-2xl pr-10 text-sm disabled:opacity-50"
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
               <Zap className="h-4 w-4 text-[#2a2a3a]" />

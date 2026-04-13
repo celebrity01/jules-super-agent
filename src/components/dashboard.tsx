@@ -47,6 +47,8 @@ interface DashboardProps {
   onRenderApiKeyChange: (key: string | null) => void;
 }
 
+import { ThemeToggle } from "./theme-toggle";
+
 export function Dashboard({
   apiKey,
   onDisconnect,
@@ -239,7 +241,9 @@ export function Dashboard({
 
           {/* Bottom Icons */}
           <div className="flex flex-col items-center gap-2">
+            <ThemeToggle />
             <NavItem
+
               icon={<Settings className="h-5 w-5" />}
               label="Settings"
               active={activeView === "settings"}
@@ -305,7 +309,7 @@ export function Dashboard({
             apiKey={apiKey}
           />
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center relative bg-grid-animated overflow-hidden">
+          <div className="wa-main justify-center items-center relative overflow-hidden">
             {/* Gradient orb */}
             <div
               className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-[0.06]"
