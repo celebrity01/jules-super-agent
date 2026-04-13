@@ -27,6 +27,7 @@ import {
   LogOut,
   Bookmark,
   Cloud,
+  Network,
 } from "lucide-react";
 
 type SidebarView = "sessions" | "sources" | "settings" | "bookmarks" | "supabase" | "render";
@@ -69,6 +70,20 @@ export function Dashboard({
   const [isNewSessionOpen, setIsNewSessionOpen] = useState(false);
   const [showAddRepoDialog, setShowAddRepoDialog] = useState(false);
   const [activeView, setActiveView] = useState<SidebarView>("sessions");
+
+  // Cross-service: Supabase projects for cross-service actions
+  const [supabaseProjects, setSupabaseProjects] = useState<Array<{ ref: string; name: string; status: string }>>([]);
+
+  useEffect(() => {
+    if (!supabasePAT) { setSupabaseProjects([]); return; }
+    let cancelled = false;
+    import("@/lib/supabase-management").then(({ listProjects }) =>
+      listProjects(supabasePAT)
+        .then((projects) => { if (!cancelled) setSupabaseProjects(projects.map((p: { ref: string; name: string; status: string }) => ({ ref: p.ref, name: p.name, status: p.status }))); })
+        .catch(() => { if (!cancelled) setSupabaseProjects([]); })
+    );
+    return () => { cancelled = true; };
+  }, [supabasePAT]);
 
   const maskedKey = `••••••••${apiKey.slice(-4)}`;
 
@@ -278,6 +293,8 @@ export function Dashboard({
           savedSessions={savedSessions}
           renderApiKey={renderApiKey}
           onRenderApiKeyChange={onRenderApiKeyChange}
+          supabaseProjects={supabaseProjects}
+          julesApiKey={apiKey}
         />
 
         {/* Column 3: Main Agent View */}
@@ -335,10 +352,37 @@ export function Dashboard({
               </div>
 
               {/* Supabase status */}
-              {supabaseUser && (
+              {supabaseUser && !renderApiKey && (
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[rgba(16,185,129,0.04)] border border-[rgba(16,185,129,0.08)]">
                   <div className="h-2 w-2 rounded-full bg-[#10b981] animate-pulse" />
                   <span className="text-[11px] text-[#10b981] font-medium">Supabase synced — data persists across sessions</span>
+                </div>
+              )}
+
+              {/* Service Mesh — all 3 connected */}
+              {supabasePAT && renderApiKey && (
+                <div className="flex flex-col gap-2 w-full">
+                  <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-[rgba(129,140,248,0.04)] border border-[rgba(129,140,248,0.1)]">
+                    <Network className="h-4 w-4 text-[#818cf8]" />
+                    <span className="text-[11px] text-[#818cf8] font-semibold">Service Mesh Active</span>
+                    <div className="ml-auto flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <div className="h-2 w-2 rounded-full bg-[#818cf8]" />
+                        <span className="text-[9px] text-[#818cf8]">Jules</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="h-2 w-2 rounded-full bg-[#10b981]" />
+                        <span className="text-[9px] text-[#10b981]">Supabase</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="h-2 w-2 rounded-full bg-[#ff6b35]" />
+                        <span className="text-[9px] text-[#ff6b35]">Render</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-[#64748b] text-center">
+                    All services connected — Jules can query Supabase and deploy to Render
+                  </p>
                 </div>
               )}
             </div>

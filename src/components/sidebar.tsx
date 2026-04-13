@@ -73,6 +73,8 @@ interface SidebarProps {
   savedSessions: SavedSession[];
   renderApiKey: string | null;
   onRenderApiKeyChange: (key: string | null) => void;
+  supabaseProjects?: Array<{ ref: string; name: string; status: string }>;
+  julesApiKey?: string | null;
 }
 
 function formatTimeAgo(dateStr: string): string {
@@ -150,6 +152,8 @@ export function Sidebar({
   savedSessions,
   renderApiKey,
   onRenderApiKeyChange,
+  supabaseProjects,
+  julesApiKey,
 }: SidebarProps) {
   const [sourcesExpanded, setSourcesExpanded] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -304,10 +308,10 @@ export function Sidebar({
           />
         )}
         {activeView === "supabase" && (
-          <SupabaseProjects onPATChange={onSupabasePATChange} />
+          <SupabaseProjects onPATChange={onSupabasePATChange} renderApiKey={renderApiKey} />
         )}
         {activeView === "render" && (
-          <RenderPanel renderApiKey={renderApiKey} onApiKeyChange={onRenderApiKeyChange} />
+          <RenderPanel renderApiKey={renderApiKey} onApiKeyChange={onRenderApiKeyChange} supabasePAT={supabasePAT} supabaseProjects={supabaseProjects} julesApiKey={julesApiKey} />
         )}
         {activeView === "settings" && (
           <SettingsView

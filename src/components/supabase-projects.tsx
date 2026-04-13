@@ -59,16 +59,20 @@ import {
   Clock,
   MapPin,
   Link2,
+  Cloud,
+  Rocket,
 } from "lucide-react";
 
 interface SupabaseProjectsProps {
   onBack?: () => void;
   onPATChange?: (pat: string | null) => void;
+  renderApiKey?: string | null;
+  renderServices?: Array<{ id: string; name: string; type: string }>;
 }
 
 type DetailView = "list" | "detail" | "create";
 
-export function SupabaseProjects({ onBack, onPATChange }: SupabaseProjectsProps) {
+export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServices }: SupabaseProjectsProps) {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [tokenInput, setTokenInput] = useState("");
   const [isConnecting, setIsConnecting] = useState(false);
@@ -437,6 +441,47 @@ export function SupabaseProjects({ onBack, onPATChange }: SupabaseProjectsProps)
           {actionError && (
             <div className="mt-2 rounded-lg bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.15)] px-3 py-2 text-xs text-[#f87171]">
               {actionError}
+            </div>
+          )}
+
+          {/* Cross-service: Deploy to Render */}
+          {renderApiKey && renderServices && renderServices.length > 0 && (
+            <div className="mt-2 rounded-lg bg-[rgba(255,107,53,0.03)] border border-[rgba(255,107,53,0.1)] p-2.5">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <Cloud className="h-3 w-3 text-[#ff6b35]" />
+                <span className="text-[9px] font-semibold text-[#ff6b35] uppercase tracking-wider">Deploy to Render</span>
+              </div>
+              <select
+                id="render-deploy-select"
+                className="w-full h-7 rounded-md bg-[#0d1117] border border-[rgba(255,255,255,0.06)] text-white text-[10px] px-2 mb-1.5 focus:border-[rgba(255,107,53,0.3)] focus:outline-none"
+                defaultValue=""
+              >
+                <option value="" disabled>Select a Render service to deploy</option>
+                {renderServices.map((svc) => (
+                  <option key={svc.id} value={svc.id}>{svc.name} ({svc.type})</option>
+                ))}
+              </select>
+              <button
+                onClick={async () => {
+                  const select = document.getElementById("render-deploy-select") as HTMLSelectElement;
+                  const serviceId = select?.value;
+                  if (!serviceId || !renderApiKey) return;
+                  try {
+                    await fetch("/api/agent/execute", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        command: { type: "trigger-deploy", source: "supabase", target: "render", action: "triggerDeploy", params: { renderServiceId: serviceId } },
+                        credentials: { renderApiKey },
+                      }),
+                    });
+                  } catch { /* silently fail */ }
+                }}
+                className="w-full h-7 rounded-md bg-gradient-to-r from-[#ff6b35] to-[#e55a2b] hover:brightness-110 text-white text-[10px] font-medium flex items-center justify-center gap-1 transition-all"
+              >
+                <Rocket className="h-3 w-3" />
+                Trigger Deploy
+              </button>
             </div>
           )}
         </div>

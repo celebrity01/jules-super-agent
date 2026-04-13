@@ -53,6 +53,9 @@ import {
 interface RenderPanelProps {
   renderApiKey: string | null;
   onApiKeyChange: (key: string | null) => void;
+  supabasePAT?: string | null;
+  supabaseProjects?: Array<{ ref: string; name: string; status: string }>;
+  julesApiKey?: string | null;
 }
 
 type DetailView = "list" | "service" | "postgres" | "keyvalue";
@@ -76,7 +79,7 @@ function formatTimeAgo(dateStr: string): string {
   }
 }
 
-export function RenderPanel({ renderApiKey, onApiKeyChange }: RenderPanelProps) {
+export function RenderPanel({ renderApiKey, onApiKeyChange, supabasePAT, supabaseProjects, julesApiKey }: RenderPanelProps) {
   const [services, setServices] = useState<RenderService[]>([]);
   const [postgres, setPostgres] = useState<RenderPostgres[]>([]);
   const [keyValueInstances, setKeyValueInstances] = useState<RenderKeyValue[]>([]);
@@ -96,6 +99,11 @@ export function RenderPanel({ renderApiKey, onApiKeyChange }: RenderPanelProps) 
   const [deploys, setDeploys] = useState<RenderDeploy[]>([]);
   const [isLoadingDeploys, setIsLoadingDeploys] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Cross-service state
+  const [showCrossServiceMenu, setShowCrossServiceMenu] = useState<string | null>(null);
+  const [crossServiceLoading, setCrossServiceLoading] = useState<string | null>(null);
+  const [crossServiceResult, setCrossServiceResult] = useState<{ success: boolean; message: string } | null>(null);
 
   const fetchResources = useCallback(async () => {
     if (!renderApiKey) return;
@@ -199,6 +207,42 @@ export function RenderPanel({ renderApiKey, onApiKeyChange }: RenderPanelProps) 
       // Silently handle — could add a toast here
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  // Cross-service: Sync Supabase API keys to Render env vars
+  const handleSyncSupabaseKeys = async (serviceId: string, projectRef: string) => {
+    if (!supabasePAT || !renderApiKey) return;
+    const key = `${serviceId}-sync-keys`;
+    setCrossServiceLoading(key);
+    setCrossServiceResult(null);
+    try {
+      const res = await fetch("/api/agent/execute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          command: {
+            type: "sync-env-vars",
+            source: "supabase",
+            target: "render",
+            action: "setEnvVars",
+            params: { supabaseProjectRef: projectRef, renderServiceId: serviceId },
+          },
+          credentials: { supabasePAT, renderApiKey },
+        }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setCrossServiceResult({ success: false, message: data.error });
+      } else {
+        const result = data.result as { syncedVars?: number };
+        setCrossServiceResult({ success: true, message: `Synced ${result.syncedVars || 0} env vars from Supabase` });
+      }
+    } catch (err) {
+      setCrossServiceResult({ success: false, message: err instanceof Error ? err.message : "Sync failed" });
+    } finally {
+      setCrossServiceLoading(null);
+      setShowCrossServiceMenu(null);
     }
   };
 
@@ -343,6 +387,50 @@ export function RenderPanel({ renderApiKey, onApiKeyChange }: RenderPanelProps) 
             </>
           )}
         </div>
+
+        {/* Cross-service actions */}
+        {supabasePAT && (
+          <div className="mb-4">
+            <div className="flex items-center gap-1.5 mb-2">
+              <Link2 className="h-3 w-3 text-[#10b981]" />
+              <span className="text-[9px] font-semibold text-[#64748b] uppercase tracking-wider">Cross-Service</span>
+            </div>
+            {crossServiceResult && (
+              <div className={`mb-2 rounded-md px-2.5 py-1.5 text-[10px] ${crossServiceResult.success ? "bg-[rgba(16,185,129,0.08)] border border-[rgba(16,185,129,0.15)] text-[#10b981]" : "bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.15)] text-[#f87171]"}`}>
+                {crossServiceResult.message}
+              </div>
+            )}
+            <div className="relative">
+              <Button
+                onClick={() => setShowCrossServiceMenu(showCrossServiceMenu === selectedService.id ? null : selectedService.id)}
+                variant="outline"
+                className="h-7 px-2.5 text-[10px] rounded-md bg-[rgba(16,185,129,0.04)] border-[rgba(16,185,129,0.12)] text-[#10b981] hover:bg-[rgba(16,185,129,0.08)] gap-1 w-full"
+              >
+                {crossServiceLoading === selectedService.id + "-sync-keys" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Database className="h-3 w-3" />}
+                Sync from Supabase
+              </Button>
+              {showCrossServiceMenu === selectedService.id && supabaseProjects && supabaseProjects.length > 0 && (
+                <div className="absolute left-0 right-0 top-full mt-1 z-20 rounded-lg bg-[#1a1a2e] border border-[rgba(255,255,255,0.08)] shadow-xl overflow-hidden">
+                  <div className="p-1.5">
+                    <span className="text-[9px] text-[#64748b] px-2 block mb-1">Select Supabase project to sync keys from:</span>
+                    {supabaseProjects.map((proj) => (
+                      <button
+                        key={proj.ref}
+                        onClick={() => handleSyncSupabaseKeys(selectedService.id, proj.ref)}
+                        disabled={crossServiceLoading !== null}
+                        className="w-full text-left px-2.5 py-1.5 rounded-md text-[11px] text-[#94a3b8] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-colors flex items-center gap-2"
+                      >
+                        <Database className="h-3 w-3 text-[#10b981] shrink-0" />
+                        <span className="truncate">{proj.name}</span>
+                        <span className="text-[9px] text-[#4a4a5a] ml-auto">{proj.ref}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Service info */}
         <div className="space-y-2 mb-4">
