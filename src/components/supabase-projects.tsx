@@ -63,11 +63,12 @@ import {
 
 interface SupabaseProjectsProps {
   onBack?: () => void;
+  onPATChange?: (pat: string | null) => void;
 }
 
 type DetailView = "list" | "detail" | "create";
 
-export function SupabaseProjects({ onBack }: SupabaseProjectsProps) {
+export function SupabaseProjects({ onBack, onPATChange }: SupabaseProjectsProps) {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [tokenInput, setTokenInput] = useState("");
   const [isConnecting, setIsConnecting] = useState(false);
@@ -150,6 +151,7 @@ export function SupabaseProjects({ onBack }: SupabaseProjectsProps) {
       setAccessToken(tokenInput.trim());
       setIsConnected(true);
       setTokenInput("");
+      onPATChange?.(tokenInput.trim());
       await fetchProjectsAndOrgs(tokenInput.trim());
     } catch (err) {
       setConnectError(err instanceof Error ? err.message : "Failed to verify token");
@@ -166,6 +168,7 @@ export function SupabaseProjects({ onBack }: SupabaseProjectsProps) {
     setOrganizations([]);
     setSelectedProject(null);
     setView("list");
+    onPATChange?.(null);
   };
 
   const loadProjectDetail = async (project: SupabaseProject) => {

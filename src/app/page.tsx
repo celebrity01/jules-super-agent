@@ -9,6 +9,8 @@ import {
   getSupabaseConfig,
   getSupabaseClient,
   clearSupabaseConfig,
+  getSupabaseAccessToken,
+  clearSupabaseAccessToken,
 } from "@/lib/supabase-client";
 import {
   getCurrentUser,
@@ -21,6 +23,7 @@ import type { User } from "@supabase/supabase-js";
 
 const STORAGE_KEY = "jules-api-key";
 const GITHUB_TOKEN_KEY = "github-token";
+const RENDER_API_KEY = "render-api-key";
 
 type AppStep = "supabase-setup" | "auth" | "api-key" | "dashboard";
 
@@ -29,12 +32,20 @@ export default function Home() {
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [githubToken, setGithubToken] = useState<string | null>(null);
   const [supabaseUser, setSupabaseUser] = useState<User | null>(null);
+  const [supabasePAT, setSupabasePAT] = useState<string | null>(null);
+  const [renderApiKey, setRenderApiKey] = useState<string | null>(null);
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   // Determine the starting step on mount
   useEffect(() => {
     const init = async () => {
+      // Check for existing Supabase PAT
+      const existingPAT = getSupabaseAccessToken();
+      if (existingPAT) {
+        setSupabasePAT(existingPAT);
+      }
+
       // Check if Supabase is configured
       const supabaseConfig = getSupabaseConfig();
 
@@ -73,6 +84,10 @@ export default function Home() {
         const storedGithubToken = localStorage.getItem(GITHUB_TOKEN_KEY);
         if (storedGithubToken) {
           setGithubToken(storedGithubToken);
+        }
+        const storedRenderKey = localStorage.getItem(RENDER_API_KEY);
+        if (storedRenderKey) {
+          setRenderApiKey(storedRenderKey);
         }
         setStep("dashboard");
         setIsLoading(false);
@@ -234,10 +249,31 @@ export default function Home() {
     setSupabaseUser(null);
   }, []);
 
+  const handleSupabasePATChange = useCallback((pat: string | null) => {
+    if (pat) {
+      setSupabasePAT(pat);
+    } else {
+      clearSupabaseAccessToken();
+      setSupabasePAT(null);
+    }
+  }, []);
+
   const handleResetSupabase = useCallback(() => {
     clearSupabaseConfig();
+    clearSupabaseAccessToken();
     setSupabaseUser(null);
+    setSupabasePAT(null);
     setStep("supabase-setup");
+  }, []);
+
+  const handleRenderApiKeyChange = useCallback((key: string | null) => {
+    if (key) {
+      localStorage.setItem(RENDER_API_KEY, key);
+      setRenderApiKey(key);
+    } else {
+      localStorage.removeItem(RENDER_API_KEY);
+      setRenderApiKey(null);
+    }
   }, []);
 
   // Loading state
@@ -299,9 +335,13 @@ export default function Home() {
             githubToken={githubToken}
             onGithubTokenChange={handleGithubTokenChange}
             supabaseUser={supabaseUser}
+            supabasePAT={supabasePAT}
+            onSupabasePATChange={handleSupabasePATChange}
             onSignIn={() => setIsAuthDialogOpen(true)}
             onSignOut={handleSignOut}
             onResetSupabase={handleResetSupabase}
+            renderApiKey={renderApiKey}
+            onRenderApiKeyChange={handleRenderApiKeyChange}
           />
           {getSupabaseConfig() && (
             <AuthDialog

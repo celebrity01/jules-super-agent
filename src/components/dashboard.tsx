@@ -8,7 +8,7 @@ import { NewSessionDialog } from "@/components/new-session-dialog";
 import { AddRepoDialog } from "@/components/add-repo-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { getSupabaseClient } from "@/lib/supabase-client";
+import { getSupabaseClient, getSupabaseConfig } from "@/lib/supabase-client";
 import {
   loadSavedSessions,
   saveSession,
@@ -26,9 +26,10 @@ import {
   User as UserIcon,
   LogOut,
   Bookmark,
+  Cloud,
 } from "lucide-react";
 
-type SidebarView = "sessions" | "sources" | "settings" | "bookmarks" | "supabase";
+type SidebarView = "sessions" | "sources" | "settings" | "bookmarks" | "supabase" | "render";
 
 interface DashboardProps {
   apiKey: string;
@@ -36,9 +37,13 @@ interface DashboardProps {
   githubToken: string | null;
   onGithubTokenChange: (token: string | null) => void;
   supabaseUser: User | null;
+  supabasePAT: string | null;
+  onSupabasePATChange: (pat: string | null) => void;
   onSignIn: () => void;
   onSignOut: () => void;
   onResetSupabase: () => void;
+  renderApiKey: string | null;
+  onRenderApiKeyChange: (key: string | null) => void;
 }
 
 export function Dashboard({
@@ -47,9 +52,13 @@ export function Dashboard({
   githubToken,
   onGithubTokenChange,
   supabaseUser,
+  supabasePAT,
+  onSupabasePATChange,
   onSignIn,
   onSignOut,
   onResetSupabase,
+  renderApiKey,
+  onRenderApiKeyChange,
 }: DashboardProps) {
   const [sources, setSources] = useState<JulesSource[]>([]);
   const [sessions, setSessions] = useState<JulesSession[]>([]);
@@ -194,12 +203,21 @@ export function Dashboard({
                 onClick={() => setActiveView("bookmarks")}
               />
             )}
-            {/* Supabase Management */}
+            {/* Supabase */}
             <NavItem
               icon={<Database className="h-5 w-5" />}
-              label="Supabase Projects"
+              label="Supabase"
               active={activeView === "supabase"}
               onClick={() => setActiveView("supabase")}
+              indicator={supabasePAT || getSupabaseConfig() ? "green" : undefined}
+            />
+            {/* Render */}
+            <NavItem
+              icon={<Cloud className="h-5 w-5" />}
+              label="Render"
+              active={activeView === "render"}
+              onClick={() => setActiveView("render")}
+              indicator={renderApiKey ? "green" : undefined}
             />
           </div>
 
@@ -252,10 +270,14 @@ export function Dashboard({
           onGitHubTokenChange={onGithubTokenChange}
           onOpenAddRepo={() => setShowAddRepoDialog(true)}
           supabaseUser={supabaseUser}
+          supabasePAT={supabasePAT}
+          onSupabasePATChange={onSupabasePATChange}
           onSignIn={onSignIn}
           onSignOut={onSignOut}
           onResetSupabase={onResetSupabase}
           savedSessions={savedSessions}
+          renderApiKey={renderApiKey}
+          onRenderApiKeyChange={onRenderApiKeyChange}
         />
 
         {/* Column 3: Main Agent View */}
