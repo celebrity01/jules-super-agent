@@ -6,7 +6,7 @@ import {
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogDialogTitle,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -114,10 +114,8 @@ export function AuthDialog({ open, onOpenChange, onAuthSuccess }: AuthDialogProp
       if (authError) throw authError;
 
       if (data.user && !data.session) {
-        // Email confirmation required
         setSuccessMessage("Check your email for a confirmation link!");
       } else if (data.user && data.session) {
-        // Auto-confirmed
         onAuthSuccess(data.user);
         onOpenChange(false);
         resetForm();
@@ -167,19 +165,17 @@ export function AuthDialog({ open, onOpenChange, onAuthSuccess }: AuthDialogProp
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md bg-[var(--wa-dialog-bg)] border-[var(--wa-border)] text-[var(--wa-text)] shadow-2xl">
+      <DialogContent className="sm:max-w-md glass-heavy border-white/[0.08] text-[#E0F7FA] shadow-2xl">
         <DialogHeader>
-          <DialogHeader>
-            <div className="flex items-center gap-2 text-lg font-semibold">
-              <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-[#10b981] to-[#059669] flex items-center justify-center">
-                <Zap className="h-3.5 w-3.5 text-white" />
-              </div>
-              <span className="gradient-text">
-                {mode === "login" ? "Welcome Back" : mode === "signup" ? "Create Account" : "Magic Link Login"}
-              </span>
+          <div className="flex items-center gap-2 text-lg font-semibold">
+            <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-[#00E5FF] to-[#00E676] flex items-center justify-center">
+              <Zap className="h-3.5 w-3.5 text-[#03080a]" />
             </div>
-          </DialogHeader>
-          <DialogDescription className="text-[var(--wa-text-muted)]">
+            <span className="gradient-text-cyan">
+              {mode === "login" ? "Welcome Back" : mode === "signup" ? "Create Account" : "Magic Link Login"}
+            </span>
+          </div>
+          <DialogDescription className="text-[#547B88]">
             {mode === "login"
               ? "Sign in to sync your data across devices"
               : mode === "signup"
@@ -190,7 +186,7 @@ export function AuthDialog({ open, onOpenChange, onAuthSuccess }: AuthDialogProp
 
         {/* Success message */}
         {successMessage && (
-          <div className="rounded-lg bg-[rgba(16,185,129,0.08)] border border-[rgba(16,185,129,0.15)] px-3 py-2.5 text-sm text-[#34d399] animate-fade-in flex items-center gap-2">
+          <div className="rounded-xl bg-[rgba(0,230,118,0.08)] border border-[rgba(0,230,118,0.15)] px-3 py-2.5 text-sm text-[#00E676] animate-fade-in flex items-center gap-2">
             <Mail className="h-4 w-4 shrink-0" />
             {successMessage}
           </div>
@@ -200,11 +196,11 @@ export function AuthDialog({ open, onOpenChange, onAuthSuccess }: AuthDialogProp
           {/* Display Name (signup only) */}
           {mode === "signup" && (
             <div className="space-y-2">
-              <Label htmlFor="auth-name" className="text-xs text-[var(--wa-text-muted)] font-medium">
+              <Label htmlFor="auth-name" className="text-[10px] text-[#547B88] uppercase tracking-wider font-semibold">
                 Display Name
               </Label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--wa-text-muted)]" />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#547B88]" />
                 <Input
                   id="auth-name"
                   placeholder="Your name"
@@ -212,7 +208,7 @@ export function AuthDialog({ open, onOpenChange, onAuthSuccess }: AuthDialogProp
                   onChange={(e) => { setDisplayName(e.target.value); setError(null); }}
                   onKeyDown={handleKeyDown}
                   disabled={isLoading}
-                  className="pl-10 wa-setup-input h-10 text-sm transition-all duration-200"
+                  className="pl-10 glass-input h-10 text-sm rounded-xl"
                 />
               </div>
             </div>
@@ -220,11 +216,11 @@ export function AuthDialog({ open, onOpenChange, onAuthSuccess }: AuthDialogProp
 
           {/* Email */}
           <div className="space-y-2">
-            <Label htmlFor="auth-email" className="text-xs text-[var(--wa-text-muted)] font-medium">
+            <Label htmlFor="auth-email" className="text-[10px] text-[#547B88] uppercase tracking-wider font-semibold">
               Email
             </Label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--wa-text-muted)]" />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#547B88]" />
               <Input
                 id="auth-email"
                 type="email"
@@ -233,7 +229,7 @@ export function AuthDialog({ open, onOpenChange, onAuthSuccess }: AuthDialogProp
                 onChange={(e) => { setEmail(e.target.value); setError(null); }}
                 onKeyDown={handleKeyDown}
                 disabled={isLoading}
-                className="pl-10 wa-setup-input h-10 text-sm transition-all duration-200"
+                className="pl-10 glass-input h-10 text-sm rounded-xl"
               />
             </div>
           </div>
@@ -241,11 +237,11 @@ export function AuthDialog({ open, onOpenChange, onAuthSuccess }: AuthDialogProp
           {/* Password (not for magic link) */}
           {mode !== "magic-link" && (
             <div className="space-y-2">
-              <Label htmlFor="auth-password" className="text-xs text-[var(--wa-text-muted)] font-medium">
+              <Label htmlFor="auth-password" className="text-[10px] text-[#547B88] uppercase tracking-wider font-semibold">
                 Password
               </Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--wa-text-muted)]" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#547B88]" />
                 <Input
                   id="auth-password"
                   type="password"
@@ -254,7 +250,7 @@ export function AuthDialog({ open, onOpenChange, onAuthSuccess }: AuthDialogProp
                   onChange={(e) => { setPassword(e.target.value); setError(null); }}
                   onKeyDown={handleKeyDown}
                   disabled={isLoading}
-                  className="pl-10 wa-setup-input h-10 text-sm transition-all duration-200"
+                  className="pl-10 glass-input h-10 text-sm rounded-xl"
                 />
               </div>
             </div>
@@ -262,7 +258,7 @@ export function AuthDialog({ open, onOpenChange, onAuthSuccess }: AuthDialogProp
 
           {/* Error */}
           {error && (
-            <div className="rounded-lg bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.15)] px-3 py-2 text-sm text-[#f87171] animate-fade-in">
+            <div className="rounded-xl bg-[rgba(255,42,95,0.08)] border border-[rgba(255,42,95,0.15)] px-3 py-2 text-sm text-[#FF2A5F] animate-fade-in">
               {error}
             </div>
           )}
@@ -273,7 +269,7 @@ export function AuthDialog({ open, onOpenChange, onAuthSuccess }: AuthDialogProp
           <Button
             onClick={handleSubmit}
             disabled={isLoading || !email.trim() || (mode !== "magic-link" && !password.trim())}
-            className="w-full bg-gradient-to-r from-[#10b981] to-[#059669] hover:brightness-110 text-white h-10 rounded-lg font-medium transition-all duration-200 shadow-md disabled:opacity-50"
+            className="w-full bg-gradient-to-r from-[#00E5FF] to-[#00E676] text-[#03080a] h-10 rounded-xl font-semibold disabled:opacity-50 press-scale"
           >
             {isLoading ? (
               <div className="flex items-center gap-2">
@@ -308,51 +304,33 @@ export function AuthDialog({ open, onOpenChange, onAuthSuccess }: AuthDialogProp
           <div className="flex items-center justify-center gap-2 text-xs">
             {mode === "login" && (
               <>
-                <button
-                  onClick={() => handleModeSwitch("signup")}
-                  className="text-[var(--wa-text-muted)] hover:text-[#10b981] transition-colors"
-                >
+                <button onClick={() => handleModeSwitch("signup")} className="text-[#547B88] hover:text-[#00E5FF] transition-colors">
                   Create account
                 </button>
-                <span className="text-[var(--wa-text-muted)] opacity-30">|</span>
-                <button
-                  onClick={() => handleModeSwitch("magic-link")}
-                  className="text-[var(--wa-text-muted)] hover:text-[#10b981] transition-colors"
-                >
+                <span className="text-[#547B88] opacity-30">|</span>
+                <button onClick={() => handleModeSwitch("magic-link")} className="text-[#547B88] hover:text-[#00E5FF] transition-colors">
                   Use magic link
                 </button>
               </>
             )}
             {mode === "signup" && (
               <>
-                <button
-                  onClick={() => handleModeSwitch("login")}
-                  className="text-[var(--wa-text-muted)] hover:text-[#10b981] transition-colors"
-                >
+                <button onClick={() => handleModeSwitch("login")} className="text-[#547B88] hover:text-[#00E5FF] transition-colors">
                   Already have an account?
                 </button>
-                <span className="text-[var(--wa-text-muted)] opacity-30">|</span>
-                <button
-                  onClick={() => handleModeSwitch("magic-link")}
-                  className="text-[var(--wa-text-muted)] hover:text-[#10b981] transition-colors"
-                >
+                <span className="text-[#547B88] opacity-30">|</span>
+                <button onClick={() => handleModeSwitch("magic-link")} className="text-[#547B88] hover:text-[#00E5FF] transition-colors">
                   Use magic link
                 </button>
               </>
             )}
             {mode === "magic-link" && (
               <>
-                <button
-                  onClick={() => handleModeSwitch("login")}
-                  className="text-[var(--wa-text-muted)] hover:text-[#10b981] transition-colors"
-                >
+                <button onClick={() => handleModeSwitch("login")} className="text-[#547B88] hover:text-[#00E5FF] transition-colors">
                   Sign in with password
                 </button>
-                <span className="text-[var(--wa-text-muted)] opacity-30">|</span>
-                <button
-                  onClick={() => handleModeSwitch("signup")}
-                  className="text-[var(--wa-text-muted)] hover:text-[#10b981] transition-colors"
-                >
+                <span className="text-[#547B88] opacity-30">|</span>
+                <button onClick={() => handleModeSwitch("signup")} className="text-[#547B88] hover:text-[#00E5FF] transition-colors">
                   Create account
                 </button>
               </>

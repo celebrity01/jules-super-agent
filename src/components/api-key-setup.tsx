@@ -17,145 +17,96 @@ export function ApiKeySetup({ onConnect }: ApiKeySetupProps) {
   const [error, setError] = useState<string | null>(null);
 
   const handleConnect = async () => {
-    if (!apiKey.trim()) {
-      setError("Please enter your API key");
-      return;
-    }
-
+    if (!apiKey.trim()) { setError("Please enter your API key"); return; }
     setIsLoading(true);
     setError(null);
-
     try {
       await listSources(apiKey.trim());
       onConnect(apiKey.trim());
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Invalid API key. Please check and try again.");
+      setError(err instanceof Error ? err.message : "Invalid API key");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleConnect();
-    }
+    if (e.key === "Enter") handleConnect();
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{ background: "var(--background)" }}>
-      {/* Gradient orbs */}
-      <div
-        className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full opacity-10 animate-float"
-        style={{
-          background: "radial-gradient(circle, #008069 0%, transparent 70%)",
-        }}
-      />
-      <div
-        className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full opacity-8"
-        style={{
-          background: "radial-gradient(circle, #00a884 0%, transparent 70%)",
-          animation: "float 6s ease-in-out infinite reverse",
-        }}
-      />
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-[#03080a]">
+      {/* Blobs */}
+      <div className="liquid-blob blob-1" />
+      <div className="liquid-blob blob-2" />
 
-      {/* Main card */}
       <div className="relative z-10 w-full max-w-md mx-4">
-        <div className="wa-setup-card p-8 animate-smooth-appear">
-          {/* Agent icon */}
+        <div className="glass-surface-heavy p-8 rounded-3xl animate-slide-up">
+          {/* Icon */}
           <div className="flex justify-center mb-6">
             <div className="relative">
-              <div className="h-20 w-20 rounded-2xl bg-gradient-agent flex items-center justify-center shadow-lg">
-                <Zap className="h-10 w-10 text-white" />
+              <div className="h-20 w-20 rounded-2xl bg-[#00E5FF] flex items-center justify-center shadow-[0_10px_40px_rgba(0,229,255,0.4)]">
+                <Zap className="h-10 w-10 text-[#071115]" />
               </div>
-              <div className="absolute -inset-2 rounded-2xl bg-gradient-agent opacity-20 animate-pulse-ring" />
-              <Sparkles className="absolute -top-1 -right-1 h-5 w-5 text-amber-400 animate-float" />
+              <div className="absolute -inset-2 rounded-2xl bg-[#00E5FF] opacity-20 animate-pulse" />
+              <Sparkles className="absolute -top-1 -right-1 h-5 w-5 text-[#00E676] animate-bounce" />
             </div>
           </div>
 
           {/* Title */}
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold gradient-text mb-2">
-              Jules Super Agent
-            </h1>
-            <p className="text-sm text-[var(--wa-text-muted)]">
-              Your AI-powered development automation agent
-            </p>
+            <h1 className="text-3xl font-bold text-[#E0F7FA] mb-2 tracking-tight">Jules Lite</h1>
+            <p className="text-sm text-[#547B88] font-mono">Pro Developer Messenger</p>
           </div>
 
-          {/* API Key Input */}
+          {/* Input */}
           <div className="space-y-3 mb-6">
-            <Label htmlFor="api-key" className="text-sm text-[var(--wa-text-muted)] font-medium">
-              API Key
-            </Label>
+            <Label className="text-[10px] font-mono text-[#547B88] uppercase font-bold tracking-[0.2em]">API Key</Label>
             <div className="relative">
-              <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--wa-text-muted)]" />
+              <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#547B88]" />
               <Input
-                id="api-key"
                 type="password"
                 placeholder="Enter your Jules API key"
                 value={apiKey}
-                onChange={(e) => {
-                  setApiKey(e.target.value);
-                  setError(null);
-                }}
+                onChange={(e) => { setApiKey(e.target.value); setError(null); }}
                 onKeyDown={handleKeyDown}
                 disabled={isLoading}
-                className="pl-10 font-mono wa-setup-input h-11 transition-all duration-200"
+                className="pl-10 font-mono glass-input h-12 rounded-2xl text-sm"
               />
             </div>
           </div>
 
-          {/* Error */}
           {error && (
-            <div className="rounded-lg bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.15)] px-3 py-2 text-sm text-[#f87171] mb-4 animate-fade-in">
+            <div className="rounded-xl bg-[rgba(255,42,95,0.08)] border border-[rgba(255,42,95,0.15)] px-4 py-3 text-sm text-[#FF2A5F] mb-4 animate-fade-in">
               {error}
             </div>
           )}
 
-          {/* Connect Button */}
-          <Button
+          <button
             onClick={handleConnect}
             disabled={isLoading || !apiKey.trim()}
-            className="w-full bg-gradient-premium text-white h-11 rounded-lg font-semibold transition-all duration-200 shadow-lg disabled:opacity-50 interaction-scale"
-            size="lg"
+            className="w-full py-4 bg-[#00E676] text-[#071115] rounded-2xl font-bold text-sm shadow-[0_10px_30px_rgba(0,230,118,0.3)] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {isLoading ? (
-              <div className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Initializing Agent...</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Zap className="h-4 w-4" />
-                <span>Initialize Agent</span>
-              </div>
-            )}
-          </Button>
+            {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Zap size={18} />}
+            <span className="uppercase tracking-widest">Initialize Agent</span>
+          </button>
 
-          {/* Help section */}
-          <div className="mt-6 rounded-xl bg-[var(--wa-search-bg)] border border-[var(--wa-border)] p-4 space-y-3">
-            <p className="text-xs font-semibold text-[var(--wa-text-muted)] uppercase tracking-wider">How to get your API key</p>
-            <ol className="text-xs text-[var(--wa-text-muted)] space-y-1.5 list-decimal list-inside">
-              <li>Visit Google Jules at <span className="text-[var(--wa-text)] font-medium">jules.google</span></li>
+          {/* Help */}
+          <div className="mt-6 glass-surface p-4 rounded-2xl space-y-3">
+            <p className="text-[10px] font-mono text-[#547B88] uppercase font-bold tracking-[0.2em]">How to get your API key</p>
+            <ol className="text-xs text-[#547B88] space-y-1.5 list-decimal list-inside">
+              <li>Visit <span className="text-[#E0F7FA] font-medium">jules.google</span></li>
               <li>Go to Settings in your account</li>
               <li>Generate a new API key</li>
               <li>Copy and paste it above</li>
             </ol>
-            <a
-              href="https://jules.google"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-[#00a884] hover:text-[#008069] transition-colors mt-1"
-            >
+            <a href="https://jules.google" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-[#00E5FF] hover:text-[#E0F7FA] transition-colors mt-1">
               Open Jules <ExternalLink className="h-3 w-3" />
             </a>
           </div>
         </div>
 
-        {/* Bottom text */}
-        <p className="text-center text-[10px] text-[var(--wa-text-muted)] mt-4">
-          Powered by Google Jules API
-        </p>
+        <p className="text-center text-[10px] text-[#547B88] mt-4 font-mono">Powered by Google Jules API</p>
       </div>
     </div>
   );
