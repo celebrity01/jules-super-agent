@@ -24,7 +24,6 @@ import {
   Bot,
   Database,
   User as UserIcon,
-  LogOut,
   Bookmark,
   Cloud,
   Network,
@@ -186,20 +185,19 @@ export function Dashboard({
   };
 
   return (
-    <div className="h-screen flex" style={{ background: "#0a0a0f" }}>
+    <div className="h-screen flex wa-app-container">
       <TooltipProvider delayDuration={300}>
-        {/* Column 1: Icon Rail */}
-        <div className="w-[60px] flex flex-col items-center py-4 border-r border-[rgba(255,255,255,0.04)] icon-rail-bg">
+        {/* Column 1: Icon Rail — WhatsApp Web left sidebar */}
+        <div className="w-[60px] flex flex-col items-center py-3 icon-rail-bg">
           {/* Logo */}
-          <div className="mb-8">
-            <div className="h-9 w-9 rounded-xl bg-gradient-agent flex items-center justify-center shadow-lg" style={{ boxShadow: "0 4px 20px rgba(99, 102, 241, 0.3)" }}>
+          <div className="mb-6">
+            <div className="h-9 w-9 rounded-xl bg-gradient-wa flex items-center justify-center shadow-lg" style={{ boxShadow: "0 4px 20px rgba(0, 168, 132, 0.3)" }}>
               <Zap className="h-5 w-5 text-white" />
             </div>
-            <div className="absolute -inset-1 rounded-xl bg-gradient-agent opacity-0 hover:opacity-15 transition-opacity duration-300" style={{ boxShadow: "0 0 24px rgba(129, 140, 248, 0.2)" }} />
           </div>
 
           {/* Nav Icons */}
-          <div className="flex flex-col items-center gap-2 flex-1">
+          <div className="flex flex-col items-center gap-1 flex-1">
             <NavItem
               icon={<MessageSquare className="h-5 w-5" />}
               label="Sessions"
@@ -240,10 +238,9 @@ export function Dashboard({
           </div>
 
           {/* Bottom Icons */}
-          <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-col items-center gap-1">
             <ThemeToggle />
             <NavItem
-
               icon={<Settings className="h-5 w-5" />}
               label="Settings"
               active={activeView === "settings"}
@@ -309,12 +306,12 @@ export function Dashboard({
             apiKey={apiKey}
           />
         ) : (
-          <div className="wa-main justify-center items-center relative overflow-hidden">
+          <div className="wa-main wa-doodle-bg justify-center items-center relative overflow-hidden">
             {/* Gradient orb */}
             <div
               className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-[0.06]"
               style={{
-                background: "radial-gradient(circle, #6366f1 0%, #818cf8 30%, transparent 70%)",
+                background: "radial-gradient(circle, #00a884 0%, #25D366 30%, transparent 70%)",
               }}
             />
 
@@ -331,16 +328,16 @@ export function Dashboard({
             <div className="flex flex-col items-center gap-6 max-w-md text-center relative z-10 animate-fade-in-up">
               {/* Agent avatar */}
               <div className="relative">
-                <div className="h-28 w-28 rounded-3xl bg-gradient-agent flex items-center justify-center shadow-2xl" style={{ boxShadow: "0 8px 40px rgba(99, 102, 241, 0.3)" }}>
+                <div className="h-28 w-28 rounded-3xl bg-gradient-wa flex items-center justify-center shadow-2xl" style={{ boxShadow: "0 8px 40px rgba(0, 168, 132, 0.3)" }}>
                   <Bot className="h-14 w-14 text-white" />
                 </div>
-                <div className="absolute -inset-3 rounded-3xl bg-gradient-agent opacity-15 animate-pulse-ring" />
+                <div className="absolute -inset-3 rounded-3xl bg-gradient-wa opacity-15 animate-pulse-ring" />
                 {/* Rotating ring */}
-                <div className="absolute -inset-5 rounded-3xl border border-[rgba(129,140,248,0.1)] animate-spin-slow" />
-                <div className="absolute -inset-7 rounded-3xl border border-dashed border-[rgba(129,140,248,0.05)]" style={{ animation: "spin-slow 12s linear infinite reverse" }} />
+                <div className="absolute -inset-5 rounded-3xl border border-[rgba(0,168,132,0.1)] animate-spin-slow" />
+                <div className="absolute -inset-7 rounded-3xl border border-dashed border-[rgba(0,168,132,0.05)]" style={{ animation: "spin-slow 12s linear infinite reverse" }} />
                 {/* Supabase badge */}
                 {supabaseUser && (
-                  <div className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-gradient-to-br from-[#10b981] to-[#059669] flex items-center justify-center border-2 border-[#0a0a0f] shadow-md" style={{ boxShadow: "0 0 12px rgba(16, 185, 129, 0.3)" }}>
+                  <div className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-gradient-to-br from-[#10b981] to-[#059669] flex items-center justify-center border-2 border-[var(--wa-bg)] shadow-md" style={{ boxShadow: "0 0 12px rgba(16, 185, 129, 0.3)" }}>
                     <Database className="h-3.5 w-3.5 text-white" />
                   </div>
                 )}
@@ -348,7 +345,7 @@ export function Dashboard({
 
               <div>
                 <h3 className="text-2xl font-bold mb-2 gradient-text">Ready to assist</h3>
-                <p className="text-sm text-[#94a3b8] leading-relaxed">
+                <p className="text-sm text-[var(--wa-text-muted)] leading-relaxed">
                   {supabaseUser
                     ? `Welcome back, ${supabaseUser.email?.split("@")[0] || "Agent"}. Select a session or create a new mission.`
                     : "Select a session from the panel or create a new mission to get started with your AI agent."}
@@ -356,7 +353,7 @@ export function Dashboard({
               </div>
 
               <div className="flex items-center gap-3">
-                <span className="badge-refined bg-[rgba(129,140,248,0.08)] text-[#818cf8] border-[rgba(129,140,248,0.15)]">
+                <span className="badge-refined bg-[rgba(0,168,132,0.08)] text-[#00a884] border-[rgba(0,168,132,0.15)]">
                   {sessions.length} sessions
                 </span>
                 <span className="badge-refined bg-[rgba(16,185,129,0.08)] text-[#10b981] border-[rgba(16,185,129,0.15)]">
@@ -381,12 +378,12 @@ export function Dashboard({
               {supabasePAT && renderApiKey && (
                 <div className="flex flex-col gap-2 w-full animate-smooth-appear">
                   <div className="glass-card-glow flex items-center gap-2 px-3 py-2.5 rounded-lg">
-                    <Network className="h-4 w-4 text-[#818cf8]" />
-                    <span className="text-[11px] text-[#818cf8] font-semibold">Service Mesh Active</span>
+                    <Network className="h-4 w-4 text-[#00a884]" />
+                    <span className="text-[11px] text-[#00a884] font-semibold">Service Mesh Active</span>
                     <div className="ml-auto flex items-center gap-3">
                       <div className="flex items-center gap-1.5">
-                        <div className="connection-dot connection-dot-green h-2 w-2 dot-pulse-1" style={{ background: "#818cf8", boxShadow: "0 0 8px rgba(129, 140, 248, 0.5)" }} />
-                        <span className="text-[9px] text-[#818cf8]">Jules</span>
+                        <div className="connection-dot connection-dot-green h-2 w-2 dot-pulse-1" style={{ background: "#00a884", boxShadow: "0 0 8px rgba(0, 168, 132, 0.5)" }} />
+                        <span className="text-[9px] text-[#00a884]">Jules</span>
                       </div>
                       <div className="mesh-connection relative h-px w-4" />
                       <div className="flex items-center gap-1.5">
@@ -400,7 +397,7 @@ export function Dashboard({
                       </div>
                     </div>
                   </div>
-                  <p className="text-[10px] text-[#64748b] text-center">
+                  <p className="text-[10px] text-[var(--wa-text-muted)] text-center">
                     All services connected — Jules can query Supabase and deploy to Render
                   </p>
                 </div>
@@ -430,7 +427,7 @@ export function Dashboard({
   );
 }
 
-/* Icon Rail Nav Item */
+/* Icon Rail Nav Item — WhatsApp Web style with green left indicator */
 function NavItem({
   icon,
   label,
@@ -449,25 +446,25 @@ function NavItem({
       <TooltipTrigger asChild>
         <button
           onClick={onClick}
-          className={`relative h-10 w-10 rounded-xl flex items-center justify-center transition-all duration-200 ${
+          className={`relative h-10 w-10 rounded-xl flex items-center justify-center transition-all duration-150 ${
             active
-              ? "bg-[rgba(129,140,248,0.1)] text-[#818cf8] shadow-sm scale-105"
-              : "text-[#64748b] hover:text-[#94a3b8] hover:bg-[rgba(255,255,255,0.04)] hover:scale-105"
+              ? "bg-[var(--wa-accent-light)] text-[#00a884] shadow-sm"
+              : "text-[var(--wa-text-muted)] hover:text-[var(--wa-text)] hover:bg-[var(--wa-hover-bg)]"
           }`}
-          style={{ transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}
         >
+          {/* WhatsApp-style green left edge indicator */}
           {active && (
             <div className="icon-rail-active-refined" />
           )}
           {icon}
           {indicator && (
-            <div className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#08080d] animate-subtle-pulse ${
+            <div className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[var(--wa-sidebar-bg)] animate-subtle-pulse ${
               indicator === "green" ? "bg-[#10b981]" : "bg-[#f59e0b]"
             }`} style={indicator === "green" ? { boxShadow: "0 0 6px rgba(16, 185, 129, 0.4)" } : { boxShadow: "0 0 6px rgba(245, 158, 11, 0.4)" }} />
           )}
         </button>
       </TooltipTrigger>
-      <TooltipContent side="right" className="bg-[#1a1a2e] text-white border-[rgba(255,255,255,0.08)] text-xs shadow-xl px-3 py-1.5 rounded-lg">
+      <TooltipContent side="right" className="bg-[var(--wa-card-bg)] text-[var(--wa-text)] border-[var(--wa-border)] text-xs shadow-xl px-3 py-1.5 rounded-lg">
         {label}
       </TooltipContent>
     </Tooltip>

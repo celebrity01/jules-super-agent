@@ -97,7 +97,7 @@ export function NewSessionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg bg-[#0c0c14] border-[rgba(255,255,255,0.06)] text-white shadow-2xl">
+      <DialogContent className="sm:max-w-lg bg-[var(--wa-dialog-bg)] border-[var(--wa-border)] text-[var(--wa-text)] shadow-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg">
             <div className="h-7 w-7 rounded-lg bg-gradient-agent flex items-center justify-center">
@@ -105,7 +105,7 @@ export function NewSessionDialog({
             </div>
             <span className="gradient-text">New Mission</span>
           </DialogTitle>
-          <DialogDescription className="text-[#64748b]">
+          <DialogDescription className="text-[var(--wa-text-muted)]">
             Launch a new AI-powered development mission
           </DialogDescription>
         </DialogHeader>
@@ -113,7 +113,7 @@ export function NewSessionDialog({
         <div className="space-y-4 py-2">
           {/* Mission Title */}
           <div className="space-y-2">
-            <Label htmlFor="mission-title" className="text-xs text-[#94a3b8] font-medium">
+            <Label htmlFor="mission-title" className="text-xs text-[var(--wa-text-muted)] font-medium">
               Mission Title
             </Label>
             <Input
@@ -122,13 +122,13 @@ export function NewSessionDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               disabled={isLoading}
-              className="input-refined border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(129,140,248,0.3)] input-glow h-10 rounded-lg text-sm transition-all duration-200"
+              className="wa-setup-input h-10 text-sm transition-all duration-200"
             />
           </div>
 
           {/* Objective */}
           <div className="space-y-2">
-            <Label htmlFor="mission-objective" className="text-xs text-[#94a3b8] font-medium">
+            <Label htmlFor="mission-objective" className="text-xs text-[var(--wa-text-muted)] font-medium">
               Objective *
             </Label>
             <Textarea
@@ -138,13 +138,13 @@ export function NewSessionDialog({
               onChange={(e) => setPrompt(e.target.value)}
               disabled={isLoading}
               rows={4}
-              className="input-refined border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(129,140,248,0.3)] input-glow rounded-lg text-sm transition-all duration-200 resize-none"
+              className="wa-setup-input rounded-lg text-sm transition-all duration-200 resize-none"
             />
           </div>
 
           {/* Target Repository */}
           <div className="space-y-2">
-            <Label className="text-xs text-[#94a3b8] font-medium flex items-center gap-1.5">
+            <Label className="text-xs text-[var(--wa-text-muted)] font-medium flex items-center gap-1.5">
               <GitBranch className="h-3 w-3" />
               Target Repository *
             </Label>
@@ -153,7 +153,7 @@ export function NewSessionDialog({
               onValueChange={setSelectedSource}
               disabled={isLoading || sources.length === 0}
             >
-              <SelectTrigger className="input-refined border-[rgba(255,255,255,0.06)] text-white h-10 rounded-lg focus:border-[rgba(129,140,248,0.3)] transition-all duration-200">
+              <SelectTrigger className="wa-setup-input h-10 rounded-lg transition-all duration-200">
                 <SelectValue
                   placeholder={
                     sources.length === 0
@@ -162,12 +162,12 @@ export function NewSessionDialog({
                   }
                 />
               </SelectTrigger>
-              <SelectContent className="bg-[#12121a] border-[rgba(255,255,255,0.06)]">
+              <SelectContent className="bg-[var(--wa-dialog-bg)] border-[var(--wa-border)]">
                 {sources.map((source) => (
                   <SelectItem
                     key={source.name}
                     value={source.name}
-                    className="text-white focus:bg-[rgba(129,140,248,0.08)] focus:text-white"
+                    className="text-[var(--wa-text)] focus:bg-[var(--wa-hover-bg)] focus:text-[var(--wa-text)]"
                   >
                     <span className="font-mono">{getSourceDisplayName(source)}</span>
                   </SelectItem>
@@ -178,7 +178,7 @@ export function NewSessionDialog({
 
           {/* Branch */}
           <div className="space-y-2">
-            <Label htmlFor="branch" className="text-xs text-[#94a3b8] font-medium">
+            <Label htmlFor="branch" className="text-xs text-[var(--wa-text-muted)] font-medium">
               Branch
             </Label>
             <Input
@@ -187,13 +187,13 @@ export function NewSessionDialog({
               value={startingBranch}
               onChange={(e) => setStartingBranch(e.target.value)}
               disabled={isLoading}
-              className="input-refined border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(129,140,248,0.3)] input-glow h-10 rounded-lg text-sm font-mono transition-all duration-200"
+              className="wa-setup-input h-10 text-sm font-mono transition-all duration-200"
             />
           </div>
 
           {/* Mode Toggle Cards */}
           <div className="space-y-2">
-            <Label className="text-xs text-[#94a3b8] font-medium flex items-center gap-1.5">
+            <Label className="text-xs text-[var(--wa-text-muted)] font-medium flex items-center gap-1.5">
               <Sliders className="h-3 w-3" />
               Mode
             </Label>
@@ -204,8 +204,8 @@ export function NewSessionDialog({
                 disabled={isLoading}
                 className={`relative flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all duration-200 interaction-scale ${
                   automationMode === "none"
-                    ? "bg-[rgba(129,140,248,0.08)] border-[rgba(129,140,248,0.2)] text-[#818cf8]"
-                    : "bg-[rgba(255,255,255,0.02)] border-[rgba(255,255,255,0.04)] text-[#64748b] hover:border-[rgba(255,255,255,0.08)] hover:text-[#94a3b8]"
+                    ? "bg-[rgba(0,168,132,0.08)] border-[rgba(0,168,132,0.2)] text-[#00a884]"
+                    : "bg-[var(--wa-search-bg)] border-[var(--wa-border)] text-[var(--wa-text-muted)] hover:border-[var(--wa-input-border)] hover:text-[var(--wa-text)]"
                 }`}
               >
                 <Sliders className="h-4 w-4" />
@@ -217,8 +217,8 @@ export function NewSessionDialog({
                 disabled={isLoading}
                 className={`relative flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all duration-200 interaction-scale ${
                   automationMode === "AUTO_CREATE_PR"
-                    ? "bg-[rgba(129,140,248,0.08)] border-[rgba(129,140,248,0.2)] text-[#818cf8]"
-                    : "bg-[rgba(255,255,255,0.02)] border-[rgba(255,255,255,0.04)] text-[#64748b] hover:border-[rgba(255,255,255,0.08)] hover:text-[#94a3b8]"
+                    ? "bg-[rgba(0,168,132,0.08)] border-[rgba(0,168,132,0.2)] text-[#00a884]"
+                    : "bg-[var(--wa-search-bg)] border-[var(--wa-border)] text-[var(--wa-text-muted)] hover:border-[var(--wa-input-border)] hover:text-[var(--wa-text)]"
                 }`}
               >
                 <GitPullRequest className="h-4 w-4" />
@@ -229,7 +229,7 @@ export function NewSessionDialog({
 
           {/* Plan Approval Toggle */}
           <div className="flex items-center justify-between px-1">
-            <Label htmlFor="plan-approval" className="text-xs text-[#94a3b8] font-medium cursor-pointer">
+            <Label htmlFor="plan-approval" className="text-xs text-[var(--wa-text-muted)] font-medium cursor-pointer">
               Require Plan Approval
             </Label>
             <Switch
@@ -237,7 +237,7 @@ export function NewSessionDialog({
               checked={requirePlanApproval}
               onCheckedChange={setRequirePlanApproval}
               disabled={isLoading}
-              className="data-[state=checked]:bg-[#818cf8]"
+              className="data-[state=checked]:bg-[#00a884]"
             />
           </div>
 
@@ -250,12 +250,12 @@ export function NewSessionDialog({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center gap-2 pt-2 border-t border-[rgba(255,255,255,0.04)]">
+        <div className="flex items-center gap-2 pt-2 border-t border-[var(--wa-border)]">
           <Button
             variant="ghost"
             onClick={handleClose}
             disabled={isLoading}
-            className="flex-1 text-[#64748b] hover:text-white hover:bg-[rgba(255,255,255,0.04)] h-10 rounded-lg"
+            className="flex-1 text-[var(--wa-text-muted)] hover:text-[var(--wa-text)] hover:bg-[var(--wa-hover-bg)] h-10 rounded-lg"
           >
             Cancel
           </Button>

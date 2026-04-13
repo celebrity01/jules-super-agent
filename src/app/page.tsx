@@ -276,15 +276,15 @@ export default function Home() {
     }
   }, []);
 
-  // Loading state
+  // Loading state — WhatsApp themed
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#0a0a0f" }}>
+      <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
         <div className="flex flex-col items-center gap-4 animate-fade-in">
           <div className="h-12 w-12 rounded-2xl bg-gradient-agent flex items-center justify-center shadow-lg animate-pulse">
             <Zap className="h-6 w-6 text-white" />
           </div>
-          <p className="text-sm text-[#64748b]">Loading workspace...</p>
+          <p className="text-sm text-[var(--wa-text-muted)]">Loading workspace...</p>
         </div>
       </div>
     );

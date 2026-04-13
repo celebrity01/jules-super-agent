@@ -86,17 +86,16 @@ export function SupabaseSetup({ onConfigured, onSkip }: SupabaseSetupProps) {
 
   if (step === "success") {
     return (
-      <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{ background: "#0a0a0f" }}>
-        <div className="absolute inset-0 bg-grid-pattern opacity-50" />
+      <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{ background: "var(--background)" }}>
         <div className="relative z-10 w-full max-w-md mx-4">
-          <div className="glass-card-refined rounded-2xl p-8 text-center animate-smooth-appear">
+          <div className="wa-setup-card p-8 text-center animate-smooth-appear">
             <div className="flex justify-center mb-4">
-              <div className="h-16 w-16 rounded-2xl bg-[rgba(16,185,129,0.1)] flex items-center justify-center glow-success">
+              <div className="h-16 w-16 rounded-2xl bg-[rgba(16,185,129,0.1)] flex items-center justify-center">
                 <CheckCircle2 className="h-8 w-8 text-[#10b981]" />
               </div>
             </div>
-            <h2 className="text-xl font-bold text-white mb-2">Supabase Connected!</h2>
-            <p className="text-sm text-[#94a3b8]">Your database is ready. Setting up your workspace...</p>
+            <h2 className="text-xl font-bold text-[var(--wa-text)] mb-2">Supabase Connected!</h2>
+            <p className="text-sm text-[var(--wa-text-muted)]">Your database is ready. Setting up your workspace...</p>
           </div>
         </div>
       </div>
@@ -104,10 +103,7 @@ export function SupabaseSetup({ onConfigured, onSkip }: SupabaseSetupProps) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{ background: "#0a0a0f" }}>
-      {/* Animated background grid */}
-      <div className="absolute inset-0 bg-grid-pattern opacity-50" />
-
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{ background: "var(--background)" }}>
       {/* Gradient orbs */}
       <div
         className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full opacity-10 animate-float"
@@ -125,7 +121,7 @@ export function SupabaseSetup({ onConfigured, onSkip }: SupabaseSetupProps) {
 
       {/* Main card */}
       <div className="relative z-10 w-full max-w-md mx-4">
-        <div className="glass-card-refined rounded-2xl p-8 animate-smooth-appear animate-glow-pulse">
+        <div className="wa-setup-card p-8 animate-smooth-appear">
           {/* Icon */}
           <div className="flex justify-center mb-6">
             <div className="relative">
@@ -140,22 +136,20 @@ export function SupabaseSetup({ onConfigured, onSkip }: SupabaseSetupProps) {
           {/* Title */}
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold mb-2">
-              <span className="bg-gradient-to-r from-[#10b981] to-[#34d399] bg-clip-text text-transparent">
-                Connect Supabase
-              </span>
+              <span className="gradient-text">Connect Supabase</span>
             </h1>
-            <p className="text-sm text-[#94a3b8]">
+            <p className="text-sm text-[var(--wa-text-muted)]">
               Add persistent storage, authentication, and real-time sync
             </p>
           </div>
 
           {/* Supabase URL Input */}
           <div className="space-y-3 mb-4">
-            <Label htmlFor="supabase-url" className="text-sm text-[#94a3b8] font-medium">
+            <Label htmlFor="supabase-url" className="text-sm text-[var(--wa-text-muted)] font-medium">
               Project URL
             </Label>
             <div className="relative">
-              <Database className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b]" />
+              <Database className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--wa-text-muted)]" />
               <Input
                 id="supabase-url"
                 type="url"
@@ -167,18 +161,18 @@ export function SupabaseSetup({ onConfigured, onSkip }: SupabaseSetupProps) {
                 }}
                 onKeyDown={handleKeyDown}
                 disabled={isLoading}
-                className="pl-10 font-mono input-refined text-white placeholder:text-[#4a4a5a] focus:border-[rgba(16,185,129,0.3)] input-glow h-11 rounded-lg transition-all duration-200"
+                className="pl-10 font-mono wa-setup-input h-11 transition-all duration-200"
               />
             </div>
           </div>
 
           {/* Anon Key Input */}
           <div className="space-y-3 mb-6">
-            <Label htmlFor="supabase-key" className="text-sm text-[#94a3b8] font-medium">
+            <Label htmlFor="supabase-key" className="text-sm text-[var(--wa-text-muted)] font-medium">
               Anon Key
             </Label>
             <div className="relative">
-              <Zap className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b]" />
+              <Zap className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--wa-text-muted)]" />
               <Input
                 id="supabase-key"
                 type="password"
@@ -190,7 +184,7 @@ export function SupabaseSetup({ onConfigured, onSkip }: SupabaseSetupProps) {
                 }}
                 onKeyDown={handleKeyDown}
                 disabled={isLoading}
-                className="pl-10 font-mono input-refined text-white placeholder:text-[#4a4a5a] focus:border-[rgba(16,185,129,0.3)] input-glow h-11 rounded-lg transition-all duration-200"
+                className="pl-10 font-mono wa-setup-input h-11 transition-all duration-200"
               />
             </div>
           </div>
@@ -225,17 +219,17 @@ export function SupabaseSetup({ onConfigured, onSkip }: SupabaseSetupProps) {
           {/* Skip option */}
           <button
             onClick={onSkip}
-            className="w-full mt-3 flex items-center justify-center gap-1.5 text-xs text-[#4a4a5a] hover:text-[#64748b] transition-colors py-2"
+            className="w-full mt-3 flex items-center justify-center gap-1.5 text-xs text-[var(--wa-text-muted)] hover:text-[var(--wa-text)] transition-colors py-2"
           >
             Skip for now — use local storage only
             <ArrowRight className="h-3 w-3" />
           </button>
 
           {/* Help section */}
-          <div className="mt-6 rounded-xl bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.04)] p-4 space-y-3">
-            <p className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">How to get your Supabase credentials</p>
-            <ol className="text-xs text-[#64748b] space-y-1.5 list-decimal list-inside">
-              <li>Visit <span className="text-[#94a3b8] font-medium">supabase.com</span> and create a project</li>
+          <div className="mt-6 rounded-xl bg-[var(--wa-search-bg)] border border-[var(--wa-border)] p-4 space-y-3">
+            <p className="text-xs font-semibold text-[var(--wa-text-muted)] uppercase tracking-wider">How to get your Supabase credentials</p>
+            <ol className="text-xs text-[var(--wa-text-muted)] space-y-1.5 list-decimal list-inside">
+              <li>Visit <span className="text-[var(--wa-text)] font-medium">supabase.com</span> and create a project</li>
               <li>Go to Project Settings → API</li>
               <li>Copy the <span className="text-[#10b981] font-medium">Project URL</span> and <span className="text-[#10b981] font-medium">anon/public key</span></li>
               <li>Run the SQL schema in the SQL Editor</li>
@@ -253,7 +247,7 @@ export function SupabaseSetup({ onConfigured, onSkip }: SupabaseSetupProps) {
                 href="https://supabase.com/docs"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs text-[#818cf8] hover:text-[#6366f1] transition-colors"
+                className="inline-flex items-center gap-1 text-xs text-[#00a884] hover:text-[#008069] transition-colors"
               >
                 Documentation <ExternalLink className="h-3 w-3" />
               </a>
@@ -266,9 +260,9 @@ export function SupabaseSetup({ onConfigured, onSkip }: SupabaseSetupProps) {
               <Database className="h-3.5 w-3.5 text-[#10b981]" />
               <span className="text-[9px] text-[#10b981] font-medium text-center">Persistent Storage</span>
             </div>
-            <div className="flex flex-col items-center gap-1 px-2 py-2.5 rounded-lg bg-[rgba(129,140,248,0.04)] border border-[rgba(129,140,248,0.08)]">
-              <Zap className="h-3.5 w-3.5 text-[#818cf8]" />
-              <span className="text-[9px] text-[#818cf8] font-medium text-center">Real-time Sync</span>
+            <div className="flex flex-col items-center gap-1 px-2 py-2.5 rounded-lg bg-[rgba(0,168,132,0.04)] border border-[rgba(0,168,132,0.08)]">
+              <Zap className="h-3.5 w-3.5 text-[#00a884]" />
+              <span className="text-[9px] text-[#00a884] font-medium text-center">Real-time Sync</span>
             </div>
             <div className="flex flex-col items-center gap-1 px-2 py-2.5 rounded-lg bg-[rgba(245,158,11,0.04)] border border-[rgba(245,158,11,0.08)]">
               <Sparkles className="h-3.5 w-3.5 text-[#f59e0b]" />
@@ -278,7 +272,7 @@ export function SupabaseSetup({ onConfigured, onSkip }: SupabaseSetupProps) {
         </div>
 
         {/* Bottom text */}
-        <p className="text-center text-[10px] text-[#4a4a5a] mt-4">
+        <p className="text-center text-[10px] text-[var(--wa-text-muted)] mt-4">
           Your credentials are stored locally and never sent to any third party
         </p>
       </div>

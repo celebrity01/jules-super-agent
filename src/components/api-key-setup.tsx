@@ -42,28 +42,25 @@ export function ApiKeySetup({ onConnect }: ApiKeySetupProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{ background: "#0a0a0f" }}>
-      {/* Animated background grid */}
-      <div className="absolute inset-0 bg-grid-pattern opacity-50" />
-
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{ background: "var(--background)" }}>
       {/* Gradient orbs */}
       <div
         className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full opacity-10 animate-float"
         style={{
-          background: "radial-gradient(circle, #6366f1 0%, transparent 70%)",
+          background: "radial-gradient(circle, #008069 0%, transparent 70%)",
         }}
       />
       <div
         className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full opacity-8"
         style={{
-          background: "radial-gradient(circle, #818cf8 0%, transparent 70%)",
+          background: "radial-gradient(circle, #00a884 0%, transparent 70%)",
           animation: "float 6s ease-in-out infinite reverse",
         }}
       />
 
       {/* Main card */}
       <div className="relative z-10 w-full max-w-md mx-4">
-        <div className="glass-card-refined rounded-2xl p-8 animate-smooth-appear animate-glow-pulse">
+        <div className="wa-setup-card p-8 animate-smooth-appear">
           {/* Agent icon */}
           <div className="flex justify-center mb-6">
             <div className="relative">
@@ -80,18 +77,18 @@ export function ApiKeySetup({ onConnect }: ApiKeySetupProps) {
             <h1 className="text-3xl font-bold gradient-text mb-2">
               Jules Super Agent
             </h1>
-            <p className="text-sm text-[#94a3b8]">
+            <p className="text-sm text-[var(--wa-text-muted)]">
               Your AI-powered development automation agent
             </p>
           </div>
 
           {/* API Key Input */}
           <div className="space-y-3 mb-6">
-            <Label htmlFor="api-key" className="text-sm text-[#94a3b8] font-medium">
+            <Label htmlFor="api-key" className="text-sm text-[var(--wa-text-muted)] font-medium">
               API Key
             </Label>
             <div className="relative">
-              <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b]" />
+              <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--wa-text-muted)]" />
               <Input
                 id="api-key"
                 type="password"
@@ -103,7 +100,7 @@ export function ApiKeySetup({ onConnect }: ApiKeySetupProps) {
                 }}
                 onKeyDown={handleKeyDown}
                 disabled={isLoading}
-                className="pl-10 font-mono input-refined text-white placeholder:text-[#4a4a5a] focus:border-[rgba(129,140,248,0.3)] input-glow h-11 rounded-lg transition-all duration-200"
+                className="pl-10 font-mono wa-setup-input h-11 transition-all duration-200"
               />
             </div>
           </div>
@@ -136,10 +133,10 @@ export function ApiKeySetup({ onConnect }: ApiKeySetupProps) {
           </Button>
 
           {/* Help section */}
-          <div className="mt-6 rounded-xl bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.04)] p-4 space-y-3">
-            <p className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">How to get your API key</p>
-            <ol className="text-xs text-[#64748b] space-y-1.5 list-decimal list-inside">
-              <li>Visit Google Jules at <span className="text-[#94a3b8] font-medium">jules.google</span></li>
+          <div className="mt-6 rounded-xl bg-[var(--wa-search-bg)] border border-[var(--wa-border)] p-4 space-y-3">
+            <p className="text-xs font-semibold text-[var(--wa-text-muted)] uppercase tracking-wider">How to get your API key</p>
+            <ol className="text-xs text-[var(--wa-text-muted)] space-y-1.5 list-decimal list-inside">
+              <li>Visit Google Jules at <span className="text-[var(--wa-text)] font-medium">jules.google</span></li>
               <li>Go to Settings in your account</li>
               <li>Generate a new API key</li>
               <li>Copy and paste it above</li>
@@ -148,7 +145,7 @@ export function ApiKeySetup({ onConnect }: ApiKeySetupProps) {
               href="https://jules.google"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-[#818cf8] hover:text-[#6366f1] transition-colors mt-1"
+              className="inline-flex items-center gap-1 text-xs text-[#00a884] hover:text-[#008069] transition-colors mt-1"
             >
               Open Jules <ExternalLink className="h-3 w-3" />
             </a>
@@ -156,7 +153,7 @@ export function ApiKeySetup({ onConnect }: ApiKeySetupProps) {
         </div>
 
         {/* Bottom text */}
-        <p className="text-center text-[10px] text-[#4a4a5a] mt-4">
+        <p className="text-center text-[10px] text-[var(--wa-text-muted)] mt-4">
           Powered by Google Jules API
         </p>
       </div>

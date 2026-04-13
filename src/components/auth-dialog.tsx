@@ -6,7 +6,7 @@ import {
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle,
+  DialogDialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -167,17 +167,19 @@ export function AuthDialog({ open, onOpenChange, onAuthSuccess }: AuthDialogProp
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md bg-[#0c0c14] border-[rgba(255,255,255,0.06)] text-white shadow-2xl">
+      <DialogContent className="sm:max-w-md bg-[var(--wa-dialog-bg)] border-[var(--wa-border)] text-[var(--wa-text)] shadow-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-lg">
-            <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-[#10b981] to-[#059669] flex items-center justify-center">
-              <Zap className="h-3.5 w-3.5 text-white" />
+          <DialogHeader>
+            <div className="flex items-center gap-2 text-lg font-semibold">
+              <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-[#10b981] to-[#059669] flex items-center justify-center">
+                <Zap className="h-3.5 w-3.5 text-white" />
+              </div>
+              <span className="gradient-text">
+                {mode === "login" ? "Welcome Back" : mode === "signup" ? "Create Account" : "Magic Link Login"}
+              </span>
             </div>
-            <span className="bg-gradient-to-r from-[#10b981] to-[#34d399] bg-clip-text text-transparent">
-              {mode === "login" ? "Welcome Back" : mode === "signup" ? "Create Account" : "Magic Link Login"}
-            </span>
-          </DialogTitle>
-          <DialogDescription className="text-[#64748b]">
+          </DialogHeader>
+          <DialogDescription className="text-[var(--wa-text-muted)]">
             {mode === "login"
               ? "Sign in to sync your data across devices"
               : mode === "signup"
@@ -198,11 +200,11 @@ export function AuthDialog({ open, onOpenChange, onAuthSuccess }: AuthDialogProp
           {/* Display Name (signup only) */}
           {mode === "signup" && (
             <div className="space-y-2">
-              <Label htmlFor="auth-name" className="text-xs text-[#94a3b8] font-medium">
+              <Label htmlFor="auth-name" className="text-xs text-[var(--wa-text-muted)] font-medium">
                 Display Name
               </Label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b]" />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--wa-text-muted)]" />
                 <Input
                   id="auth-name"
                   placeholder="Your name"
@@ -210,7 +212,7 @@ export function AuthDialog({ open, onOpenChange, onAuthSuccess }: AuthDialogProp
                   onChange={(e) => { setDisplayName(e.target.value); setError(null); }}
                   onKeyDown={handleKeyDown}
                   disabled={isLoading}
-                  className="pl-10 bg-[#0d1117] border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#4a4a5a] focus:border-[rgba(16,185,129,0.3)] input-glow h-10 rounded-lg text-sm transition-all duration-200"
+                  className="pl-10 wa-setup-input h-10 text-sm transition-all duration-200"
                 />
               </div>
             </div>
@@ -218,11 +220,11 @@ export function AuthDialog({ open, onOpenChange, onAuthSuccess }: AuthDialogProp
 
           {/* Email */}
           <div className="space-y-2">
-            <Label htmlFor="auth-email" className="text-xs text-[#94a3b8] font-medium">
+            <Label htmlFor="auth-email" className="text-xs text-[var(--wa-text-muted)] font-medium">
               Email
             </Label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b]" />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--wa-text-muted)]" />
               <Input
                 id="auth-email"
                 type="email"
@@ -231,7 +233,7 @@ export function AuthDialog({ open, onOpenChange, onAuthSuccess }: AuthDialogProp
                 onChange={(e) => { setEmail(e.target.value); setError(null); }}
                 onKeyDown={handleKeyDown}
                 disabled={isLoading}
-                className="pl-10 bg-[#0d1117] border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#4a4a5a] focus:border-[rgba(16,185,129,0.3)] input-glow h-10 rounded-lg text-sm transition-all duration-200"
+                className="pl-10 wa-setup-input h-10 text-sm transition-all duration-200"
               />
             </div>
           </div>
@@ -239,11 +241,11 @@ export function AuthDialog({ open, onOpenChange, onAuthSuccess }: AuthDialogProp
           {/* Password (not for magic link) */}
           {mode !== "magic-link" && (
             <div className="space-y-2">
-              <Label htmlFor="auth-password" className="text-xs text-[#94a3b8] font-medium">
+              <Label htmlFor="auth-password" className="text-xs text-[var(--wa-text-muted)] font-medium">
                 Password
               </Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748b]" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--wa-text-muted)]" />
                 <Input
                   id="auth-password"
                   type="password"
@@ -252,7 +254,7 @@ export function AuthDialog({ open, onOpenChange, onAuthSuccess }: AuthDialogProp
                   onChange={(e) => { setPassword(e.target.value); setError(null); }}
                   onKeyDown={handleKeyDown}
                   disabled={isLoading}
-                  className="pl-10 bg-[#0d1117] border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#4a4a5a] focus:border-[rgba(16,185,129,0.3)] input-glow h-10 rounded-lg text-sm transition-all duration-200"
+                  className="pl-10 wa-setup-input h-10 text-sm transition-all duration-200"
                 />
               </div>
             </div>
@@ -308,14 +310,14 @@ export function AuthDialog({ open, onOpenChange, onAuthSuccess }: AuthDialogProp
               <>
                 <button
                   onClick={() => handleModeSwitch("signup")}
-                  className="text-[#64748b] hover:text-[#10b981] transition-colors"
+                  className="text-[var(--wa-text-muted)] hover:text-[#10b981] transition-colors"
                 >
                   Create account
                 </button>
-                <span className="text-[#2a2a3a]">|</span>
+                <span className="text-[var(--wa-text-muted)] opacity-30">|</span>
                 <button
                   onClick={() => handleModeSwitch("magic-link")}
-                  className="text-[#64748b] hover:text-[#10b981] transition-colors"
+                  className="text-[var(--wa-text-muted)] hover:text-[#10b981] transition-colors"
                 >
                   Use magic link
                 </button>
@@ -325,14 +327,14 @@ export function AuthDialog({ open, onOpenChange, onAuthSuccess }: AuthDialogProp
               <>
                 <button
                   onClick={() => handleModeSwitch("login")}
-                  className="text-[#64748b] hover:text-[#10b981] transition-colors"
+                  className="text-[var(--wa-text-muted)] hover:text-[#10b981] transition-colors"
                 >
                   Already have an account?
                 </button>
-                <span className="text-[#2a2a3a]">|</span>
+                <span className="text-[var(--wa-text-muted)] opacity-30">|</span>
                 <button
                   onClick={() => handleModeSwitch("magic-link")}
-                  className="text-[#64748b] hover:text-[#10b981] transition-colors"
+                  className="text-[var(--wa-text-muted)] hover:text-[#10b981] transition-colors"
                 >
                   Use magic link
                 </button>
@@ -342,14 +344,14 @@ export function AuthDialog({ open, onOpenChange, onAuthSuccess }: AuthDialogProp
               <>
                 <button
                   onClick={() => handleModeSwitch("login")}
-                  className="text-[#64748b] hover:text-[#10b981] transition-colors"
+                  className="text-[var(--wa-text-muted)] hover:text-[#10b981] transition-colors"
                 >
                   Sign in with password
                 </button>
-                <span className="text-[#2a2a3a]">|</span>
+                <span className="text-[var(--wa-text-muted)] opacity-30">|</span>
                 <button
                   onClick={() => handleModeSwitch("signup")}
-                  className="text-[#64748b] hover:text-[#10b981] transition-colors"
+                  className="text-[var(--wa-text-muted)] hover:text-[#10b981] transition-colors"
                 >
                   Create account
                 </button>

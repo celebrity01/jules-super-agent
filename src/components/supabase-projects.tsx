@@ -287,13 +287,13 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
   // ========== NOT CONNECTED ==========
   if (!isConnected) {
     return (
-      <div className="flex-1 flex flex-col h-full" style={{ background: "#0c0c14" }}>
-        <div className="p-4 border-b border-[rgba(255,255,255,0.04)]">
+      <div className="flex-1 flex flex-col h-full bg-[var(--wa-sidebar-bg)]">
+        <div className="p-4 border-b border-[var(--wa-border)]">
           <div className="flex items-center gap-2 mb-1">
             <Database className="h-4 w-4 text-[#10b981]" />
-            <h2 className="text-sm font-semibold text-white">Supabase Management</h2>
+            <h2 className="text-sm font-semibold text-[var(--wa-text)]">Supabase Management</h2>
           </div>
-          <p className="text-[11px] text-[#64748b]">Manage your projects and organizations</p>
+          <p className="text-[11px] text-[var(--wa-text-muted)]">Manage your projects and organizations</p>
         </div>
 
         <div className="flex-1 flex items-center justify-center p-6">
@@ -301,15 +301,15 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
             <div className="rounded-xl bg-[rgba(16,185,129,0.02)] border border-[rgba(16,185,129,0.08)] p-5">
               <div className="flex items-center gap-3 mb-4">
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#10b981] to-[#059669] flex items-center justify-center shadow-md">
-                  <Database className="h-5 w-5 text-white" />
+                  <Database className="h-5 w-5 text-[var(--wa-text)]" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-white">Connect Supabase</h3>
-                  <p className="text-[10px] text-[#64748b]">Management API Access</p>
+                  <h3 className="text-sm font-semibold text-[var(--wa-text)]">Connect Supabase</h3>
+                  <p className="text-[10px] text-[var(--wa-text-muted)]">Management API Access</p>
                 </div>
               </div>
 
-              <p className="text-[11px] text-[#64748b] leading-relaxed mb-4">
+              <p className="text-[11px] text-[var(--wa-text-muted)] leading-relaxed mb-4">
                 Enter your Personal Access Token to manage projects, organizations, API keys, and more from the Supabase Management API.
               </p>
 
@@ -320,12 +320,12 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
                   value={tokenInput}
                   onChange={(e) => { setTokenInput(e.target.value); setConnectError(null); }}
                   disabled={isConnecting}
-                  className="input-refined border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(16,185,129,0.3)] h-9 rounded-lg text-xs font-mono"
+                  className="input-refined border-[var(--wa-input-border)] text-[var(--wa-text)] placeholder:text-[var(--wa-text-muted)] focus:border-[rgba(16,185,129,0.3)] h-9 rounded-lg text-xs font-mono"
                 />
                 <Button
                   onClick={handleConnect}
                   disabled={isConnecting || !tokenInput.trim()}
-                  className="w-full bg-gradient-to-r from-[#10b981] to-[#059669] hover:brightness-110 text-white h-9 rounded-lg font-medium text-sm transition-all duration-200 gap-2"
+                  className="w-full bg-gradient-to-r from-[#10b981] to-[#059669] hover:brightness-110 text-[var(--wa-text)] h-9 rounded-lg font-medium text-sm transition-all duration-200 gap-2"
                 >
                   {isConnecting ? (
                     <>
@@ -347,7 +347,7 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
                 </div>
               )}
 
-              <div className="mt-4 pt-3 border-t border-[rgba(255,255,255,0.04)]">
+              <div className="mt-4 pt-3 border-t border-[var(--wa-border)]">
                 <a
                   href="https://supabase.com/dashboard/account/tokens"
                   target="_blank"
@@ -370,22 +370,22 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
     const statusColor = getProjectStatusColor(selectedProject.status);
 
     return (
-      <div className="flex-1 flex flex-col h-full" style={{ background: "#0c0c14" }}>
-        <div className="p-4 border-b border-[rgba(255,255,255,0.04)]">
+      <div className="flex-1 flex flex-col h-full bg-[var(--wa-sidebar-bg)]">
+        <div className="p-4 border-b border-[var(--wa-border)]">
           <div className="flex items-center gap-2 mb-3">
             <button
               onClick={() => { setView("list"); setSelectedProject(null); }}
-              className="h-7 w-7 rounded-md flex items-center justify-center text-[#64748b] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-colors"
+              className="h-7 w-7 rounded-md flex items-center justify-center text-[var(--wa-text-muted)] hover:text-[var(--wa-text)] hover:bg-[var(--wa-hover-bg)] transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
             </button>
             <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-[#10b981] to-[#059669] flex items-center justify-center shrink-0">
-              <Database className="h-4 w-4 text-white" />
+              <Database className="h-4 w-4 text-[var(--wa-text)]" />
             </div>
             <div className="min-w-0 flex-1">
-              <h2 className="text-sm font-semibold text-white truncate">{selectedProject.name}</h2>
+              <h2 className="text-sm font-semibold text-[var(--wa-text)] truncate">{selectedProject.name}</h2>
               <div className="flex items-center gap-2 mt-0.5">
-                <code className="text-[10px] font-mono text-[#64748b]">{selectedProject.ref}</code>
+                <code className="text-[10px] font-mono text-[var(--wa-text-muted)]">{selectedProject.ref}</code>
                 <span className={`inline-flex items-center text-[9px] font-medium px-1.5 py-0.5 rounded border ${statusColor.bg} ${statusColor.text}`}>
                   {selectedProject.status.replace(/_/g, " ")}
                 </span>
@@ -431,7 +431,7 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
               href={`https://supabase.com/dashboard/project/${selectedProject.ref}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="h-7 px-2.5 rounded-md inline-flex items-center gap-1.5 text-[10px] bg-[rgba(129,140,248,0.04)] border border-[rgba(129,140,248,0.12)] text-[#818cf8] hover:bg-[rgba(129,140,248,0.1)] transition-colors"
+              className="h-7 px-2.5 rounded-md inline-flex items-center gap-1.5 text-[10px] bg-[rgba(0,168,132,0.04)] border border-[rgba(0,168,132,0.12)] text-[#00a884] hover:bg-[rgba(0,168,132,0.1)] transition-colors"
             >
               <ExternalLink className="h-3 w-3" />
               Dashboard
@@ -453,7 +453,7 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
               </div>
               <select
                 id="render-deploy-select"
-                className="w-full h-7 rounded-md input-refined border border-[rgba(255,255,255,0.06)] text-white text-[10px] px-2 mb-1.5 focus:border-[rgba(255,107,53,0.3)] focus:outline-none"
+                className="w-full h-7 rounded-md input-refined border border-[var(--wa-input-border)] text-[var(--wa-text)] text-[10px] px-2 mb-1.5 focus:border-[rgba(255,107,53,0.3)] focus:outline-none"
                 defaultValue=""
               >
                 <option value="" disabled>Select a Render service to deploy</option>
@@ -477,7 +477,7 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
                     });
                   } catch { /* silently fail */ }
                 }}
-                className="w-full h-7 rounded-md bg-gradient-to-r from-[#ff6b35] to-[#e55a2b] hover:brightness-110 text-white text-[10px] font-medium flex items-center justify-center gap-1 transition-all"
+                className="w-full h-7 rounded-md bg-gradient-to-r from-[#ff6b35] to-[#e55a2b] hover:brightness-110 text-[var(--wa-text)] text-[10px] font-medium flex items-center justify-center gap-1 transition-all"
               >
                 <Rocket className="h-3 w-3" />
                 Trigger Deploy
@@ -493,31 +493,31 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
               <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg glass-card-refined">
                 <MapPin className="h-3.5 w-3.5 text-[#10b981] shrink-0" />
                 <div>
-                  <p className="text-[10px] text-[#64748b]">Region</p>
-                  <p className="text-[11px] text-white font-medium">{getRegionName(selectedProject.region)}</p>
+                  <p className="text-[10px] text-[var(--wa-text-muted)]">Region</p>
+                  <p className="text-[11px] text-[var(--wa-text)] font-medium">{getRegionName(selectedProject.region)}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg glass-card-refined">
-                <Clock className="h-3.5 w-3.5 text-[#818cf8] shrink-0" />
+                <Clock className="h-3.5 w-3.5 text-[#00a884] shrink-0" />
                 <div>
-                  <p className="text-[10px] text-[#64748b]">Created</p>
-                  <p className="text-[11px] text-white font-medium">{new Date(selectedProject.created_at).toLocaleDateString()}</p>
+                  <p className="text-[10px] text-[var(--wa-text-muted)]">Created</p>
+                  <p className="text-[11px] text-[var(--wa-text)] font-medium">{new Date(selectedProject.created_at).toLocaleDateString()}</p>
                 </div>
               </div>
               {selectedProject.database && (
                 <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg glass-card-refined">
                   <Server className="h-3.5 w-3.5 text-[#f59e0b] shrink-0" />
                   <div>
-                    <p className="text-[10px] text-[#64748b]">Postgres</p>
-                    <p className="text-[11px] text-white font-medium">{selectedProject.database.version}</p>
+                    <p className="text-[10px] text-[var(--wa-text-muted)]">Postgres</p>
+                    <p className="text-[11px] text-[var(--wa-text)] font-medium">{selectedProject.database.version}</p>
                   </div>
                 </div>
               )}
               <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg glass-card-refined">
-                <Globe className="h-3.5 w-3.5 text-[#818cf8] shrink-0" />
+                <Globe className="h-3.5 w-3.5 text-[#00a884] shrink-0" />
                 <div>
-                  <p className="text-[10px] text-[#64748b]">Host</p>
-                  <p className="text-[11px] text-white font-mono truncate">{selectedProject.database?.host || "—"}</p>
+                  <p className="text-[10px] text-[var(--wa-text-muted)]">Host</p>
+                  <p className="text-[11px] text-[var(--wa-text)] font-mono truncate">{selectedProject.database?.host || "—"}</p>
                 </div>
               </div>
             </div>
@@ -538,7 +538,7 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
                     >
                       <div className="flex items-center gap-2">
                         <div className={`h-2 w-2 rounded-full ${service.healthy ? "bg-[#10b981]" : "bg-[#ef4444]"}`} />
-                        <span className="text-xs text-white">{service.name}</span>
+                        <span className="text-xs text-[var(--wa-text)]">{service.name}</span>
                       </div>
                       <span className={`text-[9px] font-medium ${service.healthy ? "text-[#10b981]" : "text-[#ef4444]"}`}>
                         {service.healthy ? "Healthy" : service.status}
@@ -547,7 +547,7 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
                   ))}
                 </div>
               ) : (
-                <p className="text-[11px] text-[#4a4a5a] px-3">Health data not available</p>
+                <p className="text-[11px] text-[var(--wa-text-muted)] px-3">Health data not available</p>
               )}
             </DetailSection>
 
@@ -569,11 +569,11 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
                       >
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-white">{key.name}</span>
+                            <span className="text-xs text-[var(--wa-text)]">{key.name}</span>
                             <Badge className={`h-4 px-1.5 text-[8px] ${
                               key.type === "secret"
                                 ? "bg-[rgba(239,68,68,0.08)] text-[#ef4444] border-[rgba(239,68,68,0.12)]"
-                                : "bg-[rgba(129,140,248,0.08)] text-[#818cf8] border-[rgba(129,140,248,0.12)]"
+                                : "bg-[rgba(0,168,132,0.08)] text-[#00a884] border-[rgba(0,168,132,0.12)]"
                             }`}>
                               {key.type}
                             </Badge>
@@ -581,19 +581,19 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => setVisibleKeys((prev) => ({ ...prev, [key.id]: !prev[key.id] }))}
-                              className="h-5 w-5 rounded flex items-center justify-center text-[#64748b] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-colors"
+                              className="h-5 w-5 rounded flex items-center justify-center text-[var(--wa-text-muted)] hover:text-[var(--wa-text)] hover:bg-[var(--wa-hover-bg)] transition-colors"
                             >
                               {isVisible ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
                             </button>
                             <button
                               onClick={() => copyToClipboard(key.api_key, key.id)}
-                              className="h-5 w-5 rounded flex items-center justify-center text-[#64748b] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-colors"
+                              className="h-5 w-5 rounded flex items-center justify-center text-[var(--wa-text-muted)] hover:text-[var(--wa-text)] hover:bg-[var(--wa-hover-bg)] transition-colors"
                             >
                               {copiedKey === key.id ? <Check className="h-3 w-3 text-[#10b981]" /> : <Copy className="h-3 w-3" />}
                             </button>
                           </div>
                         </div>
-                        <code className="text-[10px] font-mono text-[#64748b] break-all">
+                        <code className="text-[10px] font-mono text-[var(--wa-text-muted)] break-all">
                           {isVisible ? key.api_key : `${key.prefix}${"•".repeat(20)}`}
                         </code>
                       </div>
@@ -601,7 +601,7 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
                   })}
                 </div>
               ) : (
-                <p className="text-[11px] text-[#4a4a5a] px-3">API keys not available</p>
+                <p className="text-[11px] text-[var(--wa-text-muted)] px-3">API keys not available</p>
               )}
             </DetailSection>
 
@@ -620,20 +620,20 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
                       className="flex items-center justify-between px-3 py-2 rounded-lg glass-card-refined"
                     >
                       <div className="flex items-center gap-2">
-                        <GitBranch className="h-3 w-3 text-[#818cf8]" />
-                        <span className="text-xs text-white">{branch.name}</span>
+                        <GitBranch className="h-3 w-3 text-[#00a884]" />
+                        <span className="text-xs text-[var(--wa-text)]">{branch.name}</span>
                         {branch.is_default && (
-                          <Badge className="h-3.5 px-1 text-[8px] bg-[rgba(129,140,248,0.08)] text-[#818cf8] border-[rgba(129,140,248,0.12)]">
+                          <Badge className="h-3.5 px-1 text-[8px] bg-[rgba(0,168,132,0.08)] text-[#00a884] border-[rgba(0,168,132,0.12)]">
                             default
                           </Badge>
                         )}
                       </div>
-                      <span className="text-[9px] text-[#64748b]">{branch.status}</span>
+                      <span className="text-[9px] text-[var(--wa-text-muted)]">{branch.status}</span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-[11px] text-[#4a4a5a] px-3">No branches available</p>
+                <p className="text-[11px] text-[var(--wa-text-muted)] px-3">No branches available</p>
               )}
             </DetailSection>
 
@@ -643,7 +643,7 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
                 <AlertTriangle className="h-4 w-4 text-[#ef4444]" />
                 <h4 className="text-xs font-semibold text-[#ef4444] uppercase tracking-wider">Danger Zone</h4>
               </div>
-              <p className="text-[11px] text-[#64748b] leading-relaxed mb-3">
+              <p className="text-[11px] text-[var(--wa-text-muted)] leading-relaxed mb-3">
                 Deleting this project is irreversible. All data, including database, storage, and auth, will be permanently removed.
               </p>
               {deleteConfirm === selectedProject.ref ? (
@@ -656,7 +656,7 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
                       onClick={() => handleDelete(selectedProject.ref)}
                       disabled={actionLoading === selectedProject.ref + "-delete"}
                       size="sm"
-                      className="h-7 px-3 text-[10px] bg-[#ef4444] hover:bg-[#dc2626] text-white gap-1.5"
+                      className="h-7 px-3 text-[10px] bg-[#ef4444] hover:bg-[#dc2626] text-[var(--wa-text)] gap-1.5"
                     >
                       {actionLoading === selectedProject.ref + "-delete" ? (
                         <Loader2 className="h-3 w-3 animate-spin" />
@@ -669,7 +669,7 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
                       onClick={() => setDeleteConfirm(null)}
                       variant="outline"
                       size="sm"
-                      className="h-7 px-3 text-[10px] bg-transparent border-[rgba(255,255,255,0.06)] text-[#94a3b8]"
+                      className="h-7 px-3 text-[10px] bg-transparent border-[var(--wa-input-border)] text-[var(--wa-text-muted)]"
                     >
                       Cancel
                     </Button>
@@ -696,18 +696,18 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
   // ========== CREATE PROJECT ==========
   if (view === "create") {
     return (
-      <div className="flex-1 flex flex-col h-full" style={{ background: "#0c0c14" }}>
-        <div className="p-4 border-b border-[rgba(255,255,255,0.04)]">
+      <div className="flex-1 flex flex-col h-full bg-[var(--wa-sidebar-bg)]">
+        <div className="p-4 border-b border-[var(--wa-border)]">
           <div className="flex items-center gap-2">
             <button
               onClick={() => { setView("list"); setCreateError(null); }}
-              className="h-7 w-7 rounded-md flex items-center justify-center text-[#64748b] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-colors"
+              className="h-7 w-7 rounded-md flex items-center justify-center text-[var(--wa-text-muted)] hover:text-[var(--wa-text)] hover:bg-[var(--wa-hover-bg)] transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
             </button>
             <div>
-              <h2 className="text-sm font-semibold text-white">Create New Project</h2>
-              <p className="text-[10px] text-[#64748b]">Provision a new Supabase project</p>
+              <h2 className="text-sm font-semibold text-[var(--wa-text)]">Create New Project</h2>
+              <p className="text-[10px] text-[var(--wa-text-muted)]">Provision a new Supabase project</p>
             </div>
           </div>
         </div>
@@ -717,20 +717,20 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
             <div className="space-y-3">
               {/* Project Name */}
               <div>
-                <label className="text-[10px] font-semibold text-[#64748b] uppercase tracking-wider mb-1.5 block">
+                <label className="text-[10px] font-semibold text-[var(--wa-text-muted)] uppercase tracking-wider mb-1.5 block">
                   Project Name
                 </label>
                 <Input
                   value={createForm.name}
                   onChange={(e) => setCreateForm((f) => ({ ...f, name: e.target.value }))}
                   placeholder="my-awesome-project"
-                  className="input-refined border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(16,185,129,0.3)] h-9 rounded-lg text-xs"
+                  className="input-refined border-[var(--wa-input-border)] text-[var(--wa-text)] placeholder:text-[var(--wa-text-muted)] focus:border-[rgba(16,185,129,0.3)] h-9 rounded-lg text-xs"
                 />
               </div>
 
               {/* Database Password */}
               <div>
-                <label className="text-[10px] font-semibold text-[#64748b] uppercase tracking-wider mb-1.5 block">
+                <label className="text-[10px] font-semibold text-[var(--wa-text-muted)] uppercase tracking-wider mb-1.5 block">
                   Database Password
                 </label>
                 <Input
@@ -738,19 +738,19 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
                   value={createForm.db_pass}
                   onChange={(e) => setCreateForm((f) => ({ ...f, db_pass: e.target.value }))}
                   placeholder="Strong database password"
-                  className="input-refined border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(16,185,129,0.3)] h-9 rounded-lg text-xs"
+                  className="input-refined border-[var(--wa-input-border)] text-[var(--wa-text)] placeholder:text-[var(--wa-text-muted)] focus:border-[rgba(16,185,129,0.3)] h-9 rounded-lg text-xs"
                 />
               </div>
 
               {/* Organization */}
               <div>
-                <label className="text-[10px] font-semibold text-[#64748b] uppercase tracking-wider mb-1.5 block">
+                <label className="text-[10px] font-semibold text-[var(--wa-text-muted)] uppercase tracking-wider mb-1.5 block">
                   Organization
                 </label>
                 <select
                   value={createForm.organization_slug}
                   onChange={(e) => setCreateForm((f) => ({ ...f, organization_slug: e.target.value }))}
-                  className="w-full h-9 rounded-lg input-refined border border-[rgba(255,255,255,0.06)] text-white text-xs px-3 focus:border-[rgba(16,185,129,0.3)] focus:outline-none"
+                  className="w-full h-9 rounded-lg input-refined border border-[var(--wa-input-border)] text-[var(--wa-text)] text-xs px-3 focus:border-[rgba(16,185,129,0.3)] focus:outline-none"
                 >
                   <option value="">Select organization</option>
                   {organizations.map((org) => (
@@ -763,13 +763,13 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
 
               {/* Region */}
               <div>
-                <label className="text-[10px] font-semibold text-[#64748b] uppercase tracking-wider mb-1.5 block">
+                <label className="text-[10px] font-semibold text-[var(--wa-text-muted)] uppercase tracking-wider mb-1.5 block">
                   Region
                 </label>
                 <select
                   value={createForm.region}
                   onChange={(e) => setCreateForm((f) => ({ ...f, region: e.target.value }))}
-                  className="w-full h-9 rounded-lg input-refined border border-[rgba(255,255,255,0.06)] text-white text-xs px-3 focus:border-[rgba(16,185,129,0.3)] focus:outline-none"
+                  className="w-full h-9 rounded-lg input-refined border border-[var(--wa-input-border)] text-[var(--wa-text)] text-xs px-3 focus:border-[rgba(16,185,129,0.3)] focus:outline-none"
                 >
                   {[
                     ["us-east-1", "US East (N. Virginia)"],
@@ -805,7 +805,7 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
             <Button
               onClick={handleCreate}
               disabled={isCreating || !createForm.name.trim() || !createForm.db_pass.trim() || !createForm.organization_slug}
-              className="w-full bg-gradient-to-r from-[#10b981] to-[#059669] hover:brightness-110 text-white h-10 rounded-lg font-medium text-sm transition-all duration-200 gap-2"
+              className="w-full bg-gradient-to-r from-[#10b981] to-[#059669] hover:brightness-110 text-[var(--wa-text)] h-10 rounded-lg font-medium text-sm transition-all duration-200 gap-2"
             >
               {isCreating ? (
                 <>
@@ -827,13 +827,13 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
 
   // ========== PROJECT LIST ==========
   return (
-    <div className="flex-1 flex flex-col h-full" style={{ background: "#0c0c14" }}>
+    <div className="flex-1 flex flex-col h-full bg-[var(--wa-sidebar-bg)]">
       {/* Header */}
-      <div className="p-4 border-b border-[rgba(255,255,255,0.04)]">
+      <div className="p-4 border-b border-[var(--wa-border)]">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <Database className="h-4 w-4 text-[#10b981]" />
-            <h2 className="text-sm font-semibold text-white">Supabase Projects</h2>
+            <h2 className="text-sm font-semibold text-[var(--wa-text)]">Supabase Projects</h2>
           </div>
           <div className="flex items-center gap-1">
             <Button
@@ -847,7 +847,7 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
             </Button>
             <button
               onClick={() => accessToken && fetchProjectsAndOrgs(accessToken)}
-              className="h-6 w-6 rounded-md flex items-center justify-center text-[#64748b] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-colors"
+              className="h-6 w-6 rounded-md flex items-center justify-center text-[var(--wa-text-muted)] hover:text-[var(--wa-text)] hover:bg-[var(--wa-hover-bg)] transition-colors"
             >
               <RefreshCw className={`h-3 w-3 ${isLoadingProjects ? "animate-spin" : ""}`} />
             </button>
@@ -855,7 +855,7 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
         </div>
 
         <div className="flex items-center gap-2">
-          <Badge className="h-4 px-1.5 text-[9px] bg-[rgba(129,140,248,0.08)] text-[#818cf8] border-[rgba(129,140,248,0.12)]">
+          <Badge className="h-4 px-1.5 text-[9px] bg-[rgba(0,168,132,0.08)] text-[#00a884] border-[rgba(0,168,132,0.12)]">
             {projects.length} projects
           </Badge>
           <Badge className="h-4 px-1.5 text-[9px] bg-[rgba(16,185,129,0.08)] text-[#10b981] border-[rgba(16,185,129,0.12)]">
@@ -868,19 +868,19 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
         {isLoadingProjects ? (
           <div className="p-4 space-y-3">
             {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-20 bg-[rgba(255,255,255,0.03)] rounded-lg" />
+              <Skeleton key={i} className="h-20 bg-[var(--wa-skeleton-bg)] rounded-lg" />
             ))}
           </div>
         ) : projects.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-6">
-            <Database className="h-10 w-10 text-[#2a2a3a] mb-3" />
-            <p className="text-sm text-[#4a4a5a] mb-1">No projects found</p>
-            <p className="text-[11px] text-[#3a3a4a] mb-4 text-center">
+            <Database className="h-10 w-10 text-[var(--wa-text-muted)] mb-3" />
+            <p className="text-sm text-[var(--wa-text-muted)] mb-1">No projects found</p>
+            <p className="text-[11px] text-[var(--wa-text-muted)] mb-4 text-center">
               Create your first Supabase project to get started
             </p>
             <Button
               onClick={() => setView("create")}
-              className="bg-gradient-to-r from-[#10b981] to-[#059669] hover:brightness-110 text-white h-8 rounded-lg font-medium text-xs gap-1.5"
+              className="bg-gradient-to-r from-[#10b981] to-[#059669] hover:brightness-110 text-[var(--wa-text)] h-8 rounded-lg font-medium text-xs gap-1.5"
             >
               <Plus className="h-3.5 w-3.5" />
               Create Project
@@ -899,12 +899,12 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-[#10b981] to-[#059669] flex items-center justify-center shrink-0">
-                        <Database className="h-4 w-4 text-white" />
+                        <Database className="h-4 w-4 text-[var(--wa-text)]" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-white truncate">{project.name}</p>
+                        <p className="text-sm font-medium text-[var(--wa-text)] truncate">{project.name}</p>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <code className="text-[9px] font-mono text-[#4a4a5a]">{project.ref}</code>
+                          <code className="text-[9px] font-mono text-[var(--wa-text-muted)]">{project.ref}</code>
                         </div>
                       </div>
                     </div>
@@ -919,12 +919,12 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
                     </div>
                   </div>
                   <div className="flex items-center gap-3 mt-2 ml-10">
-                    <span className="flex items-center gap-1 text-[9px] text-[#4a4a5a]">
+                    <span className="flex items-center gap-1 text-[9px] text-[var(--wa-text-muted)]">
                       <MapPin className="h-2.5 w-2.5" />
                       {getRegionName(project.region).split("(")[0].trim()}
                     </span>
                     {project.organization_slug && (
-                      <span className="flex items-center gap-1 text-[9px] text-[#4a4a5a]">
+                      <span className="flex items-center gap-1 text-[9px] text-[var(--wa-text-muted)]">
                         <Shield className="h-2.5 w-2.5" />
                         {project.organization_slug}
                       </span>
@@ -938,10 +938,10 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
       </ScrollArea>
 
       {/* Footer with disconnect */}
-      <div className="p-3 border-t border-[rgba(255,255,255,0.04)]">
+      <div className="p-3 border-t border-[var(--wa-border)]">
         <button
           onClick={handleDisconnect}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] text-[#64748b] hover:text-[#ef4444] hover:bg-[rgba(239,68,68,0.04)] transition-colors"
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] text-[var(--wa-text-muted)] hover:text-[#ef4444] hover:bg-[rgba(239,68,68,0.04)] transition-colors"
         >
           <X className="h-3.5 w-3.5" />
           Disconnect Management API
@@ -975,14 +975,14 @@ function DetailSection({
       >
         <div className="flex items-center gap-2">
           {expanded ? (
-            <ChevronDown className="h-3 w-3 text-[#64748b]" />
+            <ChevronDown className="h-3 w-3 text-[var(--wa-text-muted)]" />
           ) : (
-            <ChevronRight className="h-3 w-3 text-[#64748b]" />
+            <ChevronRight className="h-3 w-3 text-[var(--wa-text-muted)]" />
           )}
-          <span className="text-[#64748b]">{icon}</span>
-          <span className="text-[10px] font-semibold text-[#64748b] uppercase tracking-wider">{title}</span>
+          <span className="text-[var(--wa-text-muted)]">{icon}</span>
+          <span className="text-[10px] font-semibold text-[var(--wa-text-muted)] uppercase tracking-wider">{title}</span>
         </div>
-        <Badge className="h-4 px-1.5 text-[9px] bg-[rgba(255,255,255,0.04)] text-[#64748b] border-[rgba(255,255,255,0.06)]">
+        <Badge className="h-4 px-1.5 text-[9px] bg-[rgba(255,255,255,0.04)] text-[var(--wa-text-muted)] border-[var(--wa-input-border)]">
           {isLoading ? "..." : count}
         </Badge>
       </button>

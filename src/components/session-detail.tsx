@@ -16,6 +16,9 @@ import {
   ExternalLink,
   Zap,
   Github,
+  Smile,
+  MoreVertical,
+  Search,
 } from "lucide-react";
 
 interface SessionDetailProps {
@@ -47,11 +50,11 @@ function getStateBadgeConfig(state?: string): { label: string; color: string; bg
       return { label: "Failed", color: "text-[#ef4444]", bg: "bg-[rgba(239,68,68,0.1)] border-[rgba(239,68,68,0.2)]" };
     case "ACTIVE":
     case "RUNNING":
-      return { label: "Running", color: "text-[#818cf8]", bg: "bg-[rgba(129,140,248,0.1)] border-[rgba(129,140,248,0.2)]" };
+      return { label: "Running", color: "text-[#00a884]", bg: "bg-[rgba(0,168,132,0.1)] border-[rgba(0,168,132,0.2)]" };
     case "AWAITING_APPROVAL":
       return { label: "Awaiting Approval", color: "text-[#f59e0b]", bg: "bg-[rgba(245,158,11,0.1)] border-[rgba(245,158,11,0.2)]" };
     default:
-      return { label: "Unknown", color: "text-[#64748b]", bg: "bg-[rgba(100,116,139,0.1)] border-[rgba(100,116,139,0.2)]" };
+      return { label: "Unknown", color: "text-[var(--wa-text-muted)]", bg: "bg-[rgba(100,116,139,0.1)] border-[rgba(100,116,139,0.2)]" };
   }
 }
 
@@ -147,16 +150,13 @@ export function SessionDetail({ sessionId, apiKey }: SessionDetailProps) {
 
   if (isLoadingSession) {
     return (
-      <div className="flex-1 p-6 space-y-4" style={{ background: "#0a0a0f" }}>
+      <div className="flex-1 p-6 space-y-4 bg-[var(--wa-bg)]">
         <div className="flex items-center gap-3">
-          <Skeleton className="h-8 w-8 rounded-lg bg-[rgba(255,255,255,0.03)]" />
-          <Skeleton className="h-6 w-48 bg-[rgba(255,255,255,0.03)]" />
-        </div>
-        <Skeleton className="h-4 w-72 bg-[rgba(255,255,255,0.03)]" />
-        <div className="border-t border-[rgba(255,255,255,0.04)] pt-4 space-y-3">
-          <Skeleton className="h-6 w-36 bg-[rgba(255,255,255,0.03)]" />
-          <Skeleton className="h-4 w-full bg-[rgba(255,255,255,0.03)]" />
-          <Skeleton className="h-4 w-3/4 bg-[rgba(255,255,255,0.03)]" />
+          <Skeleton className="h-10 w-10 rounded-full bg-[var(--wa-skeleton-bg)]" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-5 w-48 bg-[var(--wa-skeleton-bg)]" />
+            <Skeleton className="h-3 w-24 bg-[var(--wa-skeleton-bg)]" />
+          </div>
         </div>
       </div>
     );
@@ -164,8 +164,8 @@ export function SessionDetail({ sessionId, apiKey }: SessionDetailProps) {
 
   if (!session) {
     return (
-      <div className="flex-1 flex items-center justify-center" style={{ background: "#0a0a0f" }}>
-        <p className="text-[#64748b]">Session not found</p>
+      <div className="flex-1 flex items-center justify-center bg-[var(--wa-bg)]">
+        <p className="text-[var(--wa-text-muted)]">Session not found</p>
       </div>
     );
   }
@@ -176,58 +176,53 @@ export function SessionDetail({ sessionId, apiKey }: SessionDetailProps) {
   const branch = session.sourceContext?.githubRepoContext?.startingBranch || "main";
   const stateConfig = getStateBadgeConfig(session.state);
   const isCompleted = session.state === "COMPLETED" || session.state === "FAILED";
+  const avatarColor = getSessionAvatarColor(session.title || "Untitled");
 
   return (
     <div className="wa-main">
-      {/* Session Header */}
-      <div className="wa-header relative">
-        {/* Gradient top border */}
-        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent 0%, rgba(129, 140, 248, 0.2) 50%, transparent 100%)" }} />
-        <div className="flex items-start justify-between gap-4">
+      {/* Session Header — WhatsApp contact header style */}
+      <div className="wa-header">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          {/* Avatar like WhatsApp chat header */}
+          <div className="h-10 w-10 rounded-full flex items-center justify-center text-white text-lg font-bold shrink-0" style={{ backgroundColor: avatarColor }}>
+            {(session.title || "U")[0].toUpperCase()}
+          </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-3 mb-1.5">
-              <div className="h-7 w-7 rounded-lg bg-gradient-agent flex items-center justify-center shrink-0">
-                <Zap className="h-3.5 w-3.5 text-white" />
-              </div>
-              <h2 className="text-base font-semibold text-white truncate tracking-tight">
-                {session.title || "Untitled Session"}
-              </h2>
+            <h2 className="text-[16px] font-semibold text-[var(--wa-text)] truncate">
+              {session.title || "Untitled Session"}
+            </h2>
+            <div className="flex items-center gap-2 text-[12px] text-[var(--wa-text-muted)]">
               <span className={`status-chip ${stateConfig.bg} ${stateConfig.color}`}>
                 {stateConfig.label}
               </span>
-            </div>
-            {session.prompt && (
-              <p className="text-xs text-[#64748b] line-clamp-1 ml-10">
-                {session.prompt}
-              </p>
-            )}
-            <div className="flex items-center gap-4 mt-2 ml-10 text-xs text-[#4a4a5a]">
               {sourceRepo && (
-                <span className="flex items-center gap-1.5">
-                  <Github className="h-3 w-3 text-[#64748b]" />
+                <span className="flex items-center gap-1">
+                  <Github className="h-2.5 w-2.5" />
                   <span className="font-mono">{sourceRepo}</span>
                 </span>
               )}
-              <span className="flex items-center gap-1.5">
-                <GitBranch className="h-3 w-3 text-[#64748b]" />
+              <span className="flex items-center gap-1">
+                <GitBranch className="h-2.5 w-2.5" />
                 <span className="font-mono">{branch}</span>
               </span>
-              {session.createTime && (
-                <span className="flex items-center gap-1.5">
-                  <Clock className="h-3 w-3 text-[#64748b]" />
-                  {formatFullDate(session.createTime)}
-                </span>
-              )}
             </div>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {/* Approve Plan Button */}
+            {/* Search icon */}
+            <button className="h-9 w-9 rounded-full flex items-center justify-center text-[var(--wa-text-muted)] hover:text-[var(--wa-text)] hover:bg-[var(--wa-hover-bg)] transition-colors">
+              <Search className="h-5 w-5" />
+            </button>
+            {/* More options */}
+            <button className="h-9 w-9 rounded-full flex items-center justify-center text-[var(--wa-text-muted)] hover:text-[var(--wa-text)] hover:bg-[var(--wa-hover-bg)] transition-colors">
+              <MoreVertical className="h-5 w-5" />
+            </button>
+            {/* Approve Plan Button — WhatsApp green */}
             {session.state === "AWAITING_APPROVAL" && (
               <Button
                 onClick={handleApprove}
                 disabled={isApproving}
-                className="bg-gradient-to-r from-[#10b981] to-[#059669] hover:brightness-110 text-white gap-1.5 h-8 rounded-lg text-xs font-medium shadow-md transition-all duration-200 interaction-scale animate-subtle-pulse"
+                className="bg-[#25D366] hover:bg-[#20bd5a] text-white gap-1.5 h-8 rounded-lg text-xs font-medium shadow-md transition-all duration-200 interaction-scale animate-subtle-pulse"
                 size="sm"
               >
                 {isApproving ? (
@@ -245,23 +240,16 @@ export function SessionDetail({ sessionId, apiKey }: SessionDetailProps) {
                 href={session.output.pullRequestUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-[11px] text-[#818cf8] hover:text-[#6366f1] transition-colors px-2.5 py-1.5 rounded-md glass-card-refined hover-lift"
+                className="inline-flex items-center gap-1.5 text-[11px] text-[#00a884] hover:text-[#008069] transition-colors px-2.5 py-1.5 rounded-lg glass-card-refined hover-lift"
               >
                 View PR <ExternalLink className="h-3 w-3" />
               </a>
             )}
           </div>
         </div>
-
-        {/* Output Summary */}
-        {session.output?.summary && (
-          <div className="mt-3 ml-10 p-3 rounded-lg bg-[rgba(16,185,129,0.04)] border border-[rgba(16,185,129,0.08)]">
-            <p className="text-xs text-[#10b981]">{session.output.summary}</p>
-          </div>
-        )}
       </div>
 
-      {/* Activity Timeline */}
+      {/* Activity Timeline — chat area with wallpaper */}
       <div className="flex-1 min-h-0 overflow-hidden">
         <ActivityTimeline
           activities={activities}
@@ -269,37 +257,65 @@ export function SessionDetail({ sessionId, apiKey }: SessionDetailProps) {
         />
       </div>
 
-      {/* Message Input */}
-      <div className="wa-chat-input-container relative">
-        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent 0%, rgba(129, 140, 248, 0.1) 50%, transparent 100%)" }} />
-        <div className="flex gap-2 items-center">
+      {/* Message Input — WhatsApp-style input bar */}
+      <div className="wa-chat-input-container">
+        <div className="flex gap-2 items-center w-full">
+          {/* Emoji icon */}
+          <button className="h-10 w-10 rounded-full flex items-center justify-center text-[var(--wa-text-muted)] hover:text-[var(--wa-text)] hover:bg-[var(--wa-hover-bg)] transition-colors shrink-0">
+            <Smile className="h-6 w-6" />
+          </button>
+          {/* Input field */}
           <div className="flex-1 relative">
             <Input
-              placeholder={isCompleted ? "Session completed" : "Send instruction to Jules..."}
+              placeholder={isCompleted ? "Session completed" : "Type a message..."}
               value={messageInput}
               onChange={(e) => setMessageInput(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={isSending || isCompleted}
-              className="wa-chat-input h-10 rounded-2xl pr-10 text-sm disabled:opacity-50"
+              className="wa-chat-input h-10 rounded-2xl px-4 text-sm disabled:opacity-50"
             />
-            <div className="absolute right-3 top-1/2 -translate-y-1/2">
-              <Zap className="h-4 w-4 text-[#2a2a3a]" />
-            </div>
           </div>
-          <Button
-            onClick={handleSendMessage}
-            disabled={isSending || !messageInput.trim() || isCompleted}
-            size="icon"
-            className="bg-gradient-agent hover:brightness-115 text-white shrink-0 h-10 w-10 rounded-xl shadow-md hover-lift disabled:opacity-50"
-          >
-            {isSending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
+          {/* Send / Mic button — WhatsApp green circle */}
+          {messageInput.trim() ? (
+            <Button
+              onClick={handleSendMessage}
+              disabled={isSending || isCompleted}
+              size="icon"
+              className="bg-[#00a884] hover:bg-[#008069] text-white shrink-0 h-10 w-10 rounded-full shadow-md hover-lift disabled:opacity-50"
+            >
+              {isSending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-5 w-5" />
+              )}
+            </Button>
+          ) : (
+            <button className="h-10 w-10 rounded-full flex items-center justify-center text-[var(--wa-text-muted)] hover:text-[var(--wa-text)] hover:bg-[var(--wa-hover-bg)] transition-colors shrink-0">
+              <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8" y1="23" x2="16" y2="23"/>
+              </svg>
+            </button>
+          )}
         </div>
       </div>
     </div>
   );
+}
+
+/* Generate a consistent avatar color from the session title */
+function getSessionAvatarColor(title: string): string {
+  const colors = [
+    "#00a884", "#25D366", "#10b981", "#059669",
+    "#6366f1", "#8b5cf6", "#a855f7", "#d946ef",
+    "#ec4899", "#f43f5e", "#ef4444", "#f97316",
+    "#eab308", "#84cc16", "#14b8a6", "#06b6d4",
+  ];
+  let hash = 0;
+  for (let i = 0; i < title.length; i++) {
+    hash = title.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
 }

@@ -43,6 +43,7 @@ import {
   Eye,
   EyeOff,
   Cloud,
+  Search,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -109,11 +110,11 @@ function getStateConfig(state?: string): { color: string; bg: string; label: str
       return { color: "text-[#ef4444]", bg: "bg-[rgba(239,68,68,0.1)] border-[rgba(239,68,68,0.2)]", label: "Failed" };
     case "ACTIVE":
     case "RUNNING":
-      return { color: "text-[#818cf8]", bg: "bg-[rgba(129,140,248,0.1)] border-[rgba(129,140,248,0.2)]", label: "Running" };
+      return { color: "text-[#00a884]", bg: "bg-[rgba(0,168,132,0.1)] border-[rgba(0,168,132,0.2)]", label: "Running" };
     case "AWAITING_APPROVAL":
       return { color: "text-[#f59e0b]", bg: "bg-[rgba(245,158,11,0.1)] border-[rgba(245,158,11,0.2)]", label: "Awaiting" };
     default:
-      return { color: "text-[#64748b]", bg: "bg-[rgba(100,116,139,0.1)] border-[rgba(100,116,139,0.2)]", label: "Unknown" };
+      return { color: "text-[var(--wa-text-muted)]", bg: "bg-[rgba(100,116,139,0.1)] border-[rgba(100,116,139,0.2)]", label: "Unknown" };
   }
 }
 
@@ -122,10 +123,25 @@ function getStateDotColor(state?: string): string {
     case "COMPLETED": return "bg-[#10b981]";
     case "FAILED": return "bg-[#ef4444]";
     case "ACTIVE":
-    case "RUNNING": return "bg-[#818cf8]";
+    case "RUNNING": return "bg-[#00a884]";
     case "AWAITING_APPROVAL": return "bg-[#f59e0b]";
-    default: return "bg-[#64748b]";
+    default: return "bg-[var(--wa-text-muted)]";
   }
+}
+
+/* Generate a consistent avatar color from the session title — WhatsApp-style colored avatars */
+function getSessionAvatarColor(title: string): string {
+  const colors = [
+    "#00a884", "#25D366", "#10b981", "#059669",
+    "#6366f1", "#8b5cf6", "#a855f7", "#d946ef",
+    "#ec4899", "#f43f5e", "#ef4444", "#f97316",
+    "#eab308", "#84cc16", "#14b8a6", "#06b6d4",
+  ];
+  let hash = 0;
+  for (let i = 0; i < title.length; i++) {
+    hash = title.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
 }
 
 export function Sidebar({
@@ -176,68 +192,63 @@ export function Sidebar({
   }, [githubToken]);
 
   return (
-    <div className="w-[300px] flex flex-col h-full border-r border-[rgba(255,255,255,0.04)]" style={{ background: "linear-gradient(180deg, #0c0c16 0%, #0a0a12 50%, #0c0c16 100%)" }}>
-      {/* Agent Status Card */}
-      <div className="p-4 border-b border-[rgba(255,255,255,0.04)] agent-status-card rounded-none border-t-0 border-l-0 border-r-0" style={{ background: "linear-gradient(135deg, rgba(12, 12, 20, 0.9) 0%, rgba(16, 16, 28, 0.85) 100%)" }}>
-        <div className="flex items-center gap-3 mb-3">
+    <div className="w-[300px] flex flex-col h-full bg-[var(--wa-sidebar-bg)] border-r border-[var(--wa-border)]">
+      {/* WhatsApp-style header with user avatar + status */}
+      <div className="p-3 border-b border-[var(--wa-border)] bg-[var(--wa-header)]">
+        <div className="flex items-center gap-3">
           {supabaseUser ? (
-            // Show user avatar when logged in
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-[#10b981] to-[#059669] flex items-center justify-center text-white text-sm font-bold shadow-md">
+            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#10b981] to-[#059669] flex items-center justify-center text-white text-sm font-bold shadow-sm">
               {(supabaseUser.email || "U")[0].toUpperCase()}
             </div>
           ) : githubToken && githubUser ? (
             <img
               src={githubUser.avatar_url}
               alt={githubUser.login}
-              className="h-8 w-8 rounded-lg border border-[rgba(255,255,255,0.08)]"
+              className="h-10 w-10 rounded-full border border-[var(--wa-border)]"
             />
           ) : (
-            <div className="h-8 w-8 rounded-lg bg-gradient-agent flex items-center justify-center shadow-md">
-              <Zap className="h-4 w-4 text-white" />
+            <div className="h-10 w-10 rounded-full bg-gradient-agent flex items-center justify-center shadow-sm">
+              <Zap className="h-5 w-5 text-white" />
             </div>
           )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-white truncate">
+              <span className="text-[15px] font-semibold text-[var(--wa-text)] truncate">
                 {supabaseUser
                   ? supabaseUser.email?.split("@")[0] || "Agent"
                   : githubToken && githubUser
                   ? githubUser.name || githubUser.login
                   : "Jules Agent"}
               </span>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 ml-auto">
                 <div className="status-dot status-dot-online" />
                 <span className="text-[10px] text-[#10b981] font-medium">Online</span>
               </div>
             </div>
             {supabaseUser && (
-              <span className="text-[10px] text-[#10b981] font-mono flex items-center gap-1">
+              <span className="text-[10px] text-[#10b981] font-mono flex items-center gap-1 mt-0.5">
                 <Database className="h-2.5 w-2.5" />
                 Synced
               </span>
             )}
             {!supabaseUser && githubToken && githubUser && (
-              <span className="text-[10px] text-[#64748b] font-mono">@{githubUser.login}</span>
+              <span className="text-[10px] text-[var(--wa-text-muted)] font-mono mt-0.5">@{githubUser.login}</span>
             )}
           </div>
-        </div>
-
-        {/* API Key display */}
-        <div className="flex items-center gap-2">
-          <div className="flex-1 flex items-center gap-1.5 px-2.5 py-1.5 rounded-md glass-card-refined">
-            <Key className="h-3 w-3 text-[#64748b]" />
-            <code className="text-[10px] font-mono text-[#64748b] flex-1">{maskedKey}</code>
+          {/* Header action icons like WhatsApp */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleCopyKey}
+              className="h-8 w-8 rounded-full flex items-center justify-center text-[var(--wa-text-muted)] hover:text-[var(--wa-text)] hover:bg-[var(--wa-hover-bg)] transition-colors"
+              title="Copy API Key"
+            >
+              {copied ? <Check className="h-4 w-4 text-[#10b981]" /> : <Copy className="h-4 w-4" />}
+            </button>
           </div>
-          <button
-            onClick={handleCopyKey}
-            className="h-7 w-7 rounded-md flex items-center justify-center text-[#64748b] hover:text-[#94a3b8] hover:bg-[rgba(255,255,255,0.04)] transition-colors"
-          >
-            {copied ? <Check className="h-3 w-3 text-[#10b981]" /> : <Copy className="h-3 w-3" />}
-          </button>
         </div>
 
-        {/* Quick badges row — glassy pills */}
-        <div className="flex items-center gap-2.5 mt-3 px-0.5">
+        {/* Quick badges row — WhatsApp pills */}
+        <div className="flex items-center gap-2 mt-2.5 px-0.5">
           {githubToken && githubUser && (
             <div className="glass-pill glass-pill-accent flex-1 px-2.5 py-1">
               <Github className="h-3 w-3" />
@@ -265,7 +276,7 @@ export function Sidebar({
           {(githubToken || supabaseUser) && (
             <button
               onClick={onOpenAddRepo}
-              className="h-6 px-2 rounded-md flex items-center justify-center gap-1 bg-[rgba(129,140,248,0.08)] border border-[rgba(129,140,248,0.12)] text-[#818cf8] hover:bg-[rgba(129,140,248,0.15)] transition-all duration-200"
+              className="h-6 px-2 rounded-lg flex items-center justify-center gap-1 bg-[rgba(0,168,132,0.08)] border border-[rgba(0,168,132,0.12)] text-[#00a884] hover:bg-[rgba(0,168,132,0.15)] transition-all duration-200"
               title="Add Repository"
             >
               <Plus className="h-3 w-3" />
@@ -275,7 +286,19 @@ export function Sidebar({
         </div>
       </div>
 
-      <ScrollArea className="flex-1 dark-scrollbar">
+      {/* WhatsApp-style search bar */}
+      <div className="wa-search-container">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--wa-text-muted)]" />
+          <input
+            type="text"
+            placeholder="Search or start new mission"
+            className="wa-search-input pl-8 h-8 text-[13px]"
+          />
+        </div>
+      </div>
+
+      <ScrollArea className="flex-1 custom-scrollbar">
         {activeView === "sessions" && (
           <SessionsView
             sessions={sessions}
@@ -331,15 +354,15 @@ export function Sidebar({
         )}
       </ScrollArea>
 
-      {/* Bottom Action Bar */}
-      <div className="p-3 border-t border-[rgba(255,255,255,0.04)] space-y-2">
+      {/* Bottom Action Bar — WhatsApp style */}
+      <div className="p-3 border-t border-[var(--wa-border)] bg-[var(--wa-sidebar-bg)] space-y-2">
         {activeView === "sessions" && (
           <div className="flex gap-2">
             {githubToken && (
               <Button
                 onClick={onOpenAddRepo}
                 variant="outline"
-                className="flex-1 bg-[rgba(255,255,255,0.03)] border-[rgba(255,255,255,0.06)] text-[#94a3b8] hover:text-white hover:bg-[rgba(255,255,255,0.06)] gap-1.5 h-9 rounded-lg text-xs font-medium transition-all duration-200"
+                className="flex-1 bg-[var(--wa-hover-bg)] border-[var(--wa-border)] text-[var(--wa-text-muted)] hover:text-[var(--wa-text)] hover:bg-[var(--wa-search-bg)] gap-1.5 h-9 rounded-lg text-xs font-medium transition-all duration-200"
                 size="sm"
               >
                 <Github className="h-3.5 w-3.5" />
@@ -361,7 +384,7 @@ export function Sidebar({
   );
 }
 
-/* Sessions View — fixed: no nested buttons */
+/* Sessions View — WhatsApp chat list style */
 function SessionsView({
   sessions,
   sources,
@@ -391,7 +414,7 @@ function SessionsView({
 }) {
   return (
     <div className="py-2">
-      {/* Connected Repos — FIXED: using separate div elements, no nested buttons */}
+      {/* Connected Repos */}
       <div className="px-3 mb-2">
         <div className="flex items-center justify-between">
           <button
@@ -399,21 +422,21 @@ function SessionsView({
             className="flex items-center gap-1.5 group"
           >
             {sourcesExpanded ? (
-              <ChevronDown className="h-3 w-3 text-[#64748b]" />
+              <ChevronDown className="h-3 w-3 text-[var(--wa-text-muted)]" />
             ) : (
-              <ChevronRight className="h-3 w-3 text-[#64748b]" />
+              <ChevronRight className="h-3 w-3 text-[var(--wa-text-muted)]" />
             )}
-            <FolderGit2 className="h-3.5 w-3.5 text-[#64748b]" />
-            <span className="text-[10px] font-semibold text-[#64748b] uppercase tracking-wider">Connected Repos</span>
+            <FolderGit2 className="h-3.5 w-3.5 text-[var(--wa-text-muted)]" />
+            <span className="text-[10px] font-semibold text-[var(--wa-text-muted)] uppercase tracking-wider">Connected Repos</span>
           </button>
           <div className="flex items-center gap-1">
-            <Badge className="h-4 px-1.5 text-[9px] bg-[rgba(129,140,248,0.08)] text-[#818cf8] border-[rgba(129,140,248,0.12)] hover:bg-[rgba(129,140,248,0.12)]">
+            <Badge className="h-4 px-1.5 text-[9px] bg-[rgba(0,168,132,0.08)] text-[#00a884] border-[rgba(0,168,132,0.12)] hover:bg-[rgba(0,168,132,0.12)]">
               {sources.length}
             </Badge>
             {githubToken && (
               <button
                 onClick={(e) => { e.stopPropagation(); onOpenAddRepo(); }}
-                className="h-4 w-4 rounded flex items-center justify-center text-[#4a4a5a] hover:text-[#818cf8] hover:bg-[rgba(129,140,248,0.08)] transition-colors"
+                className="h-4 w-4 rounded flex items-center justify-center text-[var(--wa-text-muted)] hover:text-[#00a884] hover:bg-[rgba(0,168,132,0.08)] transition-colors"
                 title="Add Repository"
               >
                 <Plus className="h-3 w-3" />
@@ -426,16 +449,16 @@ function SessionsView({
           <div className="mt-1.5 ml-1">
             {isLoadingSources ? (
               <div className="space-y-1.5">
-                <Skeleton className="h-6 bg-[rgba(255,255,255,0.03)]" />
-                <Skeleton className="h-6 bg-[rgba(255,255,255,0.03)]" />
+                <Skeleton className="h-6 bg-[var(--wa-skeleton-bg)]" />
+                <Skeleton className="h-6 bg-[var(--wa-skeleton-bg)]" />
               </div>
             ) : sources.length === 0 ? (
               <div className="px-2 py-2">
-                <p className="text-[10px] text-[#4a4a5a] mb-2">No sources connected</p>
+                <p className="text-[10px] text-[var(--wa-text-muted)] mb-2">No sources connected</p>
                 {githubToken && (
                   <button
                     onClick={onOpenAddRepo}
-                    className="flex items-center gap-1.5 text-[10px] text-[#818cf8] hover:text-[#6366f1] transition-colors"
+                    className="flex items-center gap-1.5 text-[10px] text-[#00a884] hover:text-[#008069] transition-colors"
                   >
                     <Plus className="h-3 w-3" />
                     Create a new repo
@@ -447,16 +470,16 @@ function SessionsView({
                 {sources.map((source) => (
                   <div
                     key={source.name}
-                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[#94a3b8] hover:bg-[rgba(255,255,255,0.03)] hover:text-white transition-all duration-200 glass-card-refined"
+                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[var(--wa-text-muted)] hover:bg-[var(--wa-hover-bg)] hover:text-[var(--wa-text)] transition-all duration-200"
                   >
-                    <GitBranch className="h-3 w-3 text-[#4a4a5a] shrink-0" />
+                    <GitBranch className="h-3 w-3 text-[var(--wa-text-muted)] shrink-0" />
                     <span className="truncate text-xs font-mono">{getSourceDisplayName(source)}</span>
                   </div>
                 ))}
                 {githubToken && (
                   <button
                     onClick={onOpenAddRepo}
-                    className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-[#64748b] hover:text-[#818cf8] hover:bg-[rgba(129,140,248,0.04)] transition-all duration-200"
+                    className="flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-[var(--wa-text-muted)] hover:text-[#00a884] hover:bg-[rgba(0,168,132,0.04)] transition-all duration-200"
                   >
                     <Plus className="h-3 w-3 shrink-0" />
                     <span className="text-xs">Add repository</span>
@@ -470,20 +493,20 @@ function SessionsView({
 
       <div className="divider-refined mx-3 my-2" />
 
-      {/* Sessions */}
+      {/* Sessions — WhatsApp chat list style */}
       <div className="px-3">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1.5">
-            <MessageSquare className="h-3.5 w-3.5 text-[#64748b]" />
-            <span className="text-[10px] font-semibold text-[#64748b] uppercase tracking-wider">Sessions</span>
+            <MessageSquare className="h-3.5 w-3.5 text-[var(--wa-text-muted)]" />
+            <span className="text-[10px] font-semibold text-[var(--wa-text-muted)] uppercase tracking-wider">Sessions</span>
           </div>
           <div className="flex items-center gap-1">
-            <Badge className="h-4 px-1.5 text-[9px] bg-[rgba(129,140,248,0.08)] text-[#818cf8] border-[rgba(129,140,248,0.12)] hover:bg-[rgba(129,140,248,0.12)]">
+            <Badge className="h-4 px-1.5 text-[9px] bg-[rgba(0,168,132,0.08)] text-[#00a884] border-[rgba(0,168,132,0.12)] hover:bg-[rgba(0,168,132,0.12)]">
               {sessions.length}
             </Badge>
             <button
               onClick={onRefresh}
-              className="h-5 w-5 rounded flex items-center justify-center text-[#4a4a5a] hover:text-[#94a3b8] hover:bg-[rgba(255,255,255,0.04)] transition-colors"
+              className="h-5 w-5 rounded flex items-center justify-center text-[var(--wa-text-muted)] hover:text-[var(--wa-text)] hover:bg-[var(--wa-hover-bg)] transition-colors"
             >
               <RefreshCw className="h-3 w-3" />
             </button>
@@ -493,61 +516,104 @@ function SessionsView({
         {isLoadingSessions ? (
           <div className="space-y-2">
             {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-16 bg-[rgba(255,255,255,0.03)] rounded-lg" />
+              <Skeleton key={i} className="h-16 bg-[var(--wa-skeleton-bg)] rounded-lg" />
             ))}
           </div>
         ) : sessions.length === 0 ? (
           <div className="text-center py-8">
-            <MessageSquare className="h-8 w-8 text-[#2a2a3a] mx-auto mb-2" />
-            <p className="text-xs text-[#4a4a5a]">No sessions yet</p>
+            <MessageSquare className="h-8 w-8 text-[var(--wa-text-muted)] opacity-30 mx-auto mb-2" />
+            <p className="text-xs text-[var(--wa-text-muted)]">No sessions yet</p>
             <Button
               onClick={onNewSession}
               variant="ghost"
               size="sm"
-              className="mt-2 text-[#818cf8] hover:text-[#6366f1] hover:bg-[rgba(129,140,248,0.08)] text-xs h-7"
+              className="mt-2 text-[#00a884] hover:text-[#008069] hover:bg-[rgba(0,168,132,0.08)] text-xs h-7"
             >
               <Plus className="h-3 w-3 mr-1" />
               New Mission
             </Button>
           </div>
         ) : (
-          <div className="space-y-1">
+          <div className="space-y-0">
             {sessions.map((session) => {
               const sessionId = session.name.split("/").pop() || session.name;
               const isSelected = selectedSessionId === sessionId;
               const stateConfig = getStateConfig(session.state);
+              const avatarColor = getSessionAvatarColor(session.title || "Untitled");
+              const initial = (session.title || "U")[0].toUpperCase();
 
               return (
                 <button
                   key={session.name}
                   onClick={() => onSelectSession(sessionId)}
-                  className={`w-full text-left px-3 py-2.5 rounded-lg hover-lift ${
+                  className={`w-full text-left flex items-center gap-3 px-3 py-2.5 transition-all duration-150 ${
                     isSelected
-                      ? "session-item-refined-active"
-                      : "session-item-refined"
+                      ? "bg-[var(--wa-hover-bg)]"
+                      : "hover:bg-[var(--wa-hover-bg)]"
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="text-sm font-medium text-white truncate leading-tight">
-                      {session.title || "Untitled Session"}
-                    </span>
-                    <div className={`h-2 w-2 rounded-full shrink-0 mt-1.5 ${getStateDotColor(session.state)}`} />
+                  {/* Circular avatar like WhatsApp */}
+                  <div className="h-12 w-12 rounded-full flex items-center justify-center text-white text-lg font-bold shrink-0" style={{ backgroundColor: avatarColor }}>
+                    {initial}
                   </div>
-                  <div className="flex items-center gap-2 mt-1.5">
-                    <span className={`badge-refined ${stateConfig.bg} ${stateConfig.color}`}>
-                      {stateConfig.label}
-                    </span>
-                    {session.createTime && (
-                      <span className="text-[10px] text-[#4a4a5a]">
-                        {formatTimeAgo(session.createTime)}
+
+                  {/* Chat content */}
+                  <div className="flex-1 min-w-0 border-b border-[var(--wa-border)] pb-2.5">
+                    {/* Title row with timestamp */}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={`text-[15px] truncate leading-tight ${
+                        isSelected ? "text-[var(--wa-text)] font-semibold" : "text-[var(--wa-text)] font-medium"
+                      }`}>
+                        {session.title || "Untitled Session"}
                       </span>
-                    )}
+                      <span className={`text-[12px] shrink-0 ${
+                        session.state === "ACTIVE" || session.state === "RUNNING" || session.state === "AWAITING_APPROVAL"
+                          ? "text-[#00a884]"
+                          : "text-[var(--wa-text-muted)]"
+                      }`}>
+                        {session.createTime ? formatTimeAgo(session.createTime) : ""}
+                      </span>
+                    </div>
+
+                    {/* Preview row with status */}
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      {/* Status icon / double check for completed */}
+                      {session.state === "COMPLETED" && (
+                        <svg className="h-4 w-3.5 text-[#53bdeb] shrink-0" viewBox="0 0 16 11" fill="none">
+                          <path d="M11.07 0L5.51 5.56L3.93 3.98L2.51 5.4L5.51 8.4L12.49 1.42L11.07 0Z" fill="currentColor"/>
+                          <path d="M14.07 0L8.51 5.56L7.72 4.77L6.3 6.19L8.51 8.4L15.49 1.42L14.07 0Z" fill="currentColor"/>
+                        </svg>
+                      )}
+                      {session.state === "FAILED" && (
+                        <div className="h-3.5 w-3.5 rounded-full bg-[rgba(239,68,68,0.15)] flex items-center justify-center shrink-0">
+                          <div className="h-1.5 w-1.5 rounded-full bg-[#ef4444]" />
+                        </div>
+                      )}
+                      {(session.state === "ACTIVE" || session.state === "RUNNING") && (
+                        <Loader2 className="h-3 w-3 text-[#00a884] animate-spin shrink-0" />
+                      )}
+                      {session.state === "AWAITING_APPROVAL" && (
+                        <div className="h-3.5 w-3.5 rounded-full bg-[rgba(245,158,11,0.15)] flex items-center justify-center shrink-0">
+                          <div className="h-1.5 w-1.5 rounded-full bg-[#f59e0b]" />
+                        </div>
+                      )}
+                      <span className={`text-[13px] truncate leading-relaxed ${
+                        session.state === "COMPLETED" ? "text-[var(--wa-text-muted)]" :
+                        session.state === "ACTIVE" || session.state === "RUNNING" ? "text-[var(--wa-text-muted)]" :
+                        session.state === "AWAITING_APPROVAL" ? "text-[#f59e0b]" :
+                        session.state === "FAILED" ? "text-[#ef4444]" :
+                        "text-[var(--wa-text-muted)]"
+                      }`}>
+                        {session.prompt
+                          ? session.prompt.substring(0, 50) + (session.prompt.length > 50 ? "..." : "")
+                          : stateConfig.label}
+                      </span>
+                      {/* Unread badge for active sessions */}
+                      {(session.state === "AWAITING_APPROVAL") && (
+                        <span className="wa-unread-badge ml-auto shrink-0">!</span>
+                      )}
+                    </div>
                   </div>
-                  {session.prompt && (
-                    <p className="text-[11px] text-[#4a4a5a] mt-1.5 truncate leading-relaxed">
-                      {session.prompt}
-                    </p>
-                  )}
                 </button>
               );
             })}
@@ -558,7 +624,7 @@ function SessionsView({
   );
 }
 
-/* Bookmarks View — new for Supabase */
+/* Bookmarks View */
 function BookmarksView({
   savedSessions,
   onSelectSession,
@@ -566,13 +632,12 @@ function BookmarksView({
   savedSessions: SavedSession[];
   onSelectSession: (id: string) => void;
 }) {
-  const bookmarked = savedSessions.filter((s) => s.bookmarked);
   const allSaved = savedSessions;
 
   return (
     <div className="p-4">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xs font-semibold text-[#64748b] uppercase tracking-wider flex items-center gap-1.5">
+        <h3 className="text-xs font-semibold text-[var(--wa-text-muted)] uppercase tracking-wider flex items-center gap-1.5">
           <Bookmark className="h-3.5 w-3.5" />
           Saved Sessions
         </h3>
@@ -583,9 +648,9 @@ function BookmarksView({
 
       {allSaved.length === 0 ? (
         <div className="text-center py-8">
-          <Bookmark className="h-8 w-8 text-[#2a2a3a] mx-auto mb-2" />
-          <p className="text-xs text-[#4a4a5a]">No saved sessions yet</p>
-          <p className="text-[10px] text-[#3a3a4a] mt-1">
+          <Bookmark className="h-8 w-8 text-[var(--wa-text-muted)] opacity-30 mx-auto mb-2" />
+          <p className="text-xs text-[var(--wa-text-muted)]">No saved sessions yet</p>
+          <p className="text-[10px] text-[var(--wa-text-muted)] opacity-60 mt-1">
             Sessions are auto-saved when Supabase is connected
           </p>
         </div>
@@ -598,7 +663,7 @@ function BookmarksView({
               className="w-full text-left glass-card-hover rounded-lg px-3 py-2.5"
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="text-sm font-medium text-white truncate">
+                <span className="text-sm font-medium text-[var(--wa-text)] truncate">
                   {saved.session_title || saved.session_id}
                 </span>
                 {saved.bookmarked && (
@@ -607,12 +672,12 @@ function BookmarksView({
               </div>
               {saved.source_name && (
                 <div className="flex items-center gap-1.5 mt-1">
-                  <GitBranch className="h-3 w-3 text-[#4a4a5a]" />
-                  <span className="text-[10px] text-[#4a4a5a] font-mono truncate">{saved.source_name}</span>
+                  <GitBranch className="h-3 w-3 text-[var(--wa-text-muted)]" />
+                  <span className="text-[10px] text-[var(--wa-text-muted)] font-mono truncate">{saved.source_name}</span>
                 </div>
               )}
               {saved.prompt && (
-                <p className="text-[10px] text-[#4a4a5a] mt-1 truncate">{saved.prompt}</p>
+                <p className="text-[10px] text-[var(--wa-text-muted)] mt-1 truncate">{saved.prompt}</p>
               )}
               <div className="flex items-center gap-2 mt-1.5">
                 {saved.session_state && (
@@ -620,7 +685,7 @@ function BookmarksView({
                     {getStateConfig(saved.session_state).label}
                   </span>
                 )}
-                <span className="text-[9px] text-[#3a3a4a]">
+                <span className="text-[9px] text-[var(--wa-text-muted)] opacity-60">
                   {formatTimeAgo(saved.updated_at)}
                 </span>
               </div>
@@ -649,12 +714,12 @@ function SourcesView({
   return (
     <div className="p-4">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xs font-semibold text-[#64748b] uppercase tracking-wider">Repositories</h3>
+        <h3 className="text-xs font-semibold text-[var(--wa-text-muted)] uppercase tracking-wider">Repositories</h3>
         <div className="flex items-center gap-1">
           {githubToken && (
             <button
               onClick={onOpenAddRepo}
-              className="h-6 px-2 rounded-md flex items-center justify-center gap-1 bg-[rgba(129,140,248,0.08)] border border-[rgba(129,140,248,0.12)] text-[#818cf8] hover:bg-[rgba(129,140,248,0.15)] transition-all duration-200"
+              className="h-6 px-2 rounded-lg flex items-center justify-center gap-1 bg-[rgba(0,168,132,0.08)] border border-[rgba(0,168,132,0.12)] text-[#00a884] hover:bg-[rgba(0,168,132,0.15)] transition-all duration-200"
               title="Add Repository"
             >
               <Plus className="h-3 w-3" />
@@ -663,7 +728,7 @@ function SourcesView({
           )}
           <button
             onClick={onRefresh}
-            className="h-6 w-6 rounded-md flex items-center justify-center text-[#4a4a5a] hover:text-[#94a3b8] hover:bg-[rgba(255,255,255,0.04)] transition-colors"
+            className="h-6 w-6 rounded-lg flex items-center justify-center text-[var(--wa-text-muted)] hover:text-[var(--wa-text)] hover:bg-[var(--wa-hover-bg)] transition-colors"
           >
             <RefreshCw className="h-3 w-3" />
           </button>
@@ -671,17 +736,17 @@ function SourcesView({
       </div>
 
       {githubToken && sources.length === 0 && !isLoadingSources && (
-        <div className="mb-4 rounded-xl bg-[rgba(129,140,248,0.04)] border border-[rgba(129,140,248,0.08)] p-4">
+        <div className="mb-4 rounded-xl bg-[rgba(0,168,132,0.04)] border border-[rgba(0,168,132,0.08)] p-4">
           <div className="flex items-center gap-2 mb-2">
-            <Github className="h-4 w-4 text-[#818cf8]" />
-            <span className="text-sm font-medium text-white">Create your first repo</span>
+            <Github className="h-4 w-4 text-[#00a884]" />
+            <span className="text-sm font-medium text-[var(--wa-text)]">Create your first repo</span>
           </div>
-          <p className="text-xs text-[#64748b] mb-3 leading-relaxed">
+          <p className="text-xs text-[var(--wa-text-muted)] mb-3 leading-relaxed">
             You&apos;re connected to GitHub! Create a new repository to get started with Jules.
           </p>
           <Button
             onClick={onOpenAddRepo}
-            className="w-full bg-gradient-agent hover:brightness-115 text-white h-8 rounded-lg font-medium text-xs transition-all duration-200 gap-1.5"
+            className="w-full bg-gradient-agent hover:brightness-110 text-white h-8 rounded-lg font-medium text-xs transition-all duration-200 gap-1.5"
             size="sm"
           >
             <Plus className="h-3.5 w-3.5" />
@@ -693,13 +758,13 @@ function SourcesView({
       {isLoadingSources ? (
         <div className="space-y-3">
           {[1, 2].map((i) => (
-            <Skeleton key={i} className="h-12 bg-[rgba(255,255,255,0.03)] rounded-lg" />
+            <Skeleton key={i} className="h-12 bg-[var(--wa-skeleton-bg)] rounded-lg" />
           ))}
         </div>
       ) : sources.length === 0 ? (
         <div className="text-center py-8">
-          <FolderGit2 className="h-8 w-8 text-[#2a2a3a] mx-auto mb-2" />
-          <p className="text-xs text-[#4a4a5a]">No sources connected</p>
+          <FolderGit2 className="h-8 w-8 text-[var(--wa-text-muted)] opacity-30 mx-auto mb-2" />
+          <p className="text-xs text-[var(--wa-text-muted)]">No sources connected</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -709,18 +774,18 @@ function SourcesView({
               className="glass-card-hover rounded-lg px-3 py-2.5"
             >
               <div className="flex items-center gap-2.5">
-                <div className="h-8 w-8 rounded-md bg-[rgba(129,140,248,0.08)] flex items-center justify-center shrink-0">
-                  <GitBranch className="h-4 w-4 text-[#818cf8]" />
+                <div className="h-8 w-8 rounded-lg bg-[rgba(0,168,132,0.08)] flex items-center justify-center shrink-0">
+                  <GitBranch className="h-4 w-4 text-[#00a884]" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-mono text-white truncate">{getSourceDisplayName(source)}</p>
-                  <p className="text-[10px] text-[#4a4a5a] truncate">{source.id || source.name}</p>
+                  <p className="text-sm font-mono text-[var(--wa-text)] truncate">{getSourceDisplayName(source)}</p>
+                  <p className="text-[10px] text-[var(--wa-text-muted)] truncate">{source.id || source.name}</p>
                 </div>
                 <a
                   href={`https://github.com/${getSourceDisplayName(source)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="h-6 w-6 rounded-md flex items-center justify-center text-[#4a4a5a] hover:text-[#818cf8] hover:bg-[rgba(129,140,248,0.08)] transition-colors shrink-0"
+                  className="h-6 w-6 rounded-lg flex items-center justify-center text-[var(--wa-text-muted)] hover:text-[#00a884] hover:bg-[rgba(0,168,132,0.08)] transition-colors shrink-0"
                   title="Open on GitHub"
                 >
                   <ExternalLink className="h-3 w-3" />
@@ -732,7 +797,7 @@ function SourcesView({
           {githubToken && (
             <button
               onClick={onOpenAddRepo}
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-lg border border-dashed border-[rgba(255,255,255,0.06)] text-[#64748b] hover:text-[#818cf8] hover:border-[rgba(129,140,248,0.15)] hover:bg-[rgba(129,140,248,0.03)] transition-all duration-200"
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-lg border border-dashed border-[var(--wa-border)] text-[var(--wa-text-muted)] hover:text-[#00a884] hover:border-[rgba(0,168,132,0.15)] hover:bg-[rgba(0,168,132,0.03)] transition-all duration-200"
             >
               <Plus className="h-4 w-4" />
               <span className="text-xs font-medium">Add Repository</span>
@@ -889,41 +954,41 @@ function SettingsView({
 
   return (
     <div className="p-4">
-      <h3 className="text-xs font-semibold text-[#64748b] uppercase tracking-wider mb-4">Settings</h3>
+      <h3 className="text-xs font-semibold text-[var(--wa-text-muted)] uppercase tracking-wider mb-4">Settings</h3>
 
       <div className="space-y-4">
         {/* Refresh Data */}
         <button
           onClick={onRefresh}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#94a3b8] hover:text-white hover:bg-[rgba(255,255,255,0.03)] transition-all duration-200"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[var(--wa-text-muted)] hover:text-[var(--wa-text)] hover:bg-[var(--wa-hover-bg)] transition-all duration-200"
         >
           <RefreshCw className="h-4 w-4" />
           <span className="text-sm">Refresh Data</span>
         </button>
 
-        <Separator className="bg-[rgba(255,255,255,0.04)]" />
+        <Separator className="bg-[var(--wa-border)]" />
 
         {/* Supabase Account Section */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Database className="h-4 w-4 text-[#10b981]" />
-            <h4 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">Supabase</h4>
+            <h4 className="text-xs font-semibold text-[var(--wa-text-muted)] uppercase tracking-wider">Supabase</h4>
           </div>
 
           {/* Project Client Status */}
           {supabaseConfig && (
             <div className="glass-card rounded-lg p-3">
               <div className="flex items-center gap-2 mb-2">
-                <div className="h-6 w-6 rounded-md bg-[rgba(16,185,129,0.1)] flex items-center justify-center shrink-0">
+                <div className="h-6 w-6 rounded-lg bg-[rgba(16,185,129,0.1)] flex items-center justify-center shrink-0">
                   <Database className="h-3 w-3 text-[#10b981]" />
                 </div>
-                <span className="text-[11px] font-medium text-white">Project Client</span>
+                <span className="text-[11px] font-medium text-[var(--wa-text)]">Project Client</span>
                 <div className="ml-auto flex items-center gap-1">
                   <div className="h-1.5 w-1.5 rounded-full bg-[#10b981]" />
                   <span className="text-[9px] text-[#10b981] font-medium">Configured</span>
                 </div>
               </div>
-              <code className="text-[9px] font-mono text-[#4a4a5a] truncate block">{supabaseConfig.url}</code>
+              <code className="text-[9px] font-mono text-[var(--wa-text-muted)] truncate block">{supabaseConfig.url}</code>
             </div>
           )}
 
@@ -935,7 +1000,7 @@ function SettingsView({
                   {(supabaseUser.email || "U")[0].toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium text-white truncate">
+                  <p className="text-xs font-medium text-[var(--wa-text)] truncate">
                     {supabaseUser.email}
                   </p>
                   <p className="text-[10px] text-[#10b981] flex items-center gap-1">
@@ -946,19 +1011,19 @@ function SettingsView({
               </div>
               <button
                 onClick={onSignOut}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 mt-2 rounded-md text-[10px] text-[#ef4444] hover:bg-[rgba(239,68,68,0.08)] transition-all duration-200"
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 mt-2 rounded-lg text-[10px] text-[#ef4444] hover:bg-[rgba(239,68,68,0.08)] transition-all duration-200"
               >
                 <LogOut className="h-3 w-3" />
                 Sign Out
               </button>
             </div>
           ) : supabaseConfig ? (
-            <div className="rounded-lg bg-[rgba(16,185,129,0.02)] border border-[rgba(16,185,129,0.06)] p-3">
+            <div className="rounded-lg bg-[rgba(16,185,129,0.04)] border border-[rgba(16,185,129,0.1)] p-3">
               <div className="flex items-center gap-2 mb-1.5">
-                <Database className="h-3.5 w-3.5 text-[#64748b]" />
-                <span className="text-[11px] font-medium text-[#94a3b8]">Auth Account</span>
+                <Database className="h-3.5 w-3.5 text-[var(--wa-text-muted)]" />
+                <span className="text-[11px] font-medium text-[var(--wa-text-muted)]">Auth Account</span>
               </div>
-              <p className="text-[10px] text-[#4a4a5a] mb-2">
+              <p className="text-[10px] text-[var(--wa-text-muted)] mb-2">
                 Sign in to sync your API keys, sessions, and settings across devices.
               </p>
               <Button
@@ -975,33 +1040,33 @@ function SettingsView({
           {supabasePAT ? (
             <div className="glass-card rounded-lg p-3">
               <div className="flex items-center gap-2 mb-2">
-                <div className="h-6 w-6 rounded-md bg-[rgba(16,185,129,0.1)] flex items-center justify-center shrink-0">
+                <div className="h-6 w-6 rounded-lg bg-[rgba(16,185,129,0.1)] flex items-center justify-center shrink-0">
                   <Shield className="h-3 w-3 text-[#10b981]" />
                 </div>
-                <span className="text-[11px] font-medium text-white">Management API</span>
+                <span className="text-[11px] font-medium text-[var(--wa-text)]">Management API</span>
                 <div className="ml-auto flex items-center gap-1">
                   <div className="h-1.5 w-1.5 rounded-full bg-[#10b981]" />
                   <span className="text-[9px] text-[#10b981] font-medium">Connected</span>
                 </div>
               </div>
-              <p className="text-[9px] text-[#4a4a5a] mb-2">
+              <p className="text-[9px] text-[var(--wa-text-muted)] mb-2">
                 Manage projects, organizations, API keys, and more via the Supabase Management API.
               </p>
               <button
                 onClick={handleDisconnectPAT}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[10px] text-[#ef4444] hover:bg-[rgba(239,68,68,0.08)] transition-all duration-200"
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[10px] text-[#ef4444] hover:bg-[rgba(239,68,68,0.08)] transition-all duration-200"
               >
                 <Unplug className="h-3 w-3" />
                 Disconnect Management API
               </button>
             </div>
           ) : (
-            <div className="rounded-lg bg-[rgba(16,185,129,0.02)] border border-[rgba(16,185,129,0.06)] p-3">
+            <div className="rounded-lg bg-[rgba(16,185,129,0.04)] border border-[rgba(16,185,129,0.1)] p-3">
               <div className="flex items-center gap-2 mb-1.5">
-                <Shield className="h-3.5 w-3.5 text-[#64748b]" />
-                <span className="text-[11px] font-medium text-[#94a3b8]">Management API</span>
+                <Shield className="h-3.5 w-3.5 text-[var(--wa-text-muted)]" />
+                <span className="text-[11px] font-medium text-[var(--wa-text-muted)]">Management API</span>
               </div>
-              <p className="text-[10px] text-[#4a4a5a] mb-2">
+              <p className="text-[10px] text-[var(--wa-text-muted)] mb-2">
                 Enter your Personal Access Token to manage projects, API keys, and organizations.
               </p>
               <div className="space-y-1.5">
@@ -1011,7 +1076,7 @@ function SettingsView({
                   value={patInput}
                   onChange={(e) => { setPatInput(e.target.value); setPatError(null); }}
                   disabled={isConnectingPAT}
-                  className="input-refined border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(16,185,129,0.3)] h-8 rounded-lg text-[11px] font-mono"
+                  className="input-refined border-[var(--wa-input-border)] text-[var(--wa-text)] placeholder:text-[var(--wa-text-muted)] focus:border-[rgba(16,185,129,0.3)] h-8 rounded-lg text-[11px] font-mono"
                 />
                 <Button
                   onClick={handleConnectPAT}
@@ -1026,95 +1091,120 @@ function SettingsView({
                   ) : (
                     <>
                       <Link2 className="h-3 w-3" />
-                      Connect Management API
+                      Connect
                     </>
                   )}
                 </Button>
               </div>
               {patError && (
-                <div className="mt-2 rounded-md bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.15)] px-2.5 py-1.5 text-[10px] text-[#f87171]">
-                  {patError}
-                </div>
+                <p className="mt-1.5 text-[10px] text-[#ef4444]">{patError}</p>
               )}
-              <a
-                href="https://supabase.com/dashboard/account/tokens"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-[9px] text-[#10b981] hover:text-[#059669] transition-colors mt-2"
-              >
-                Generate a token on Supabase
-                <ExternalLink className="h-2 w-2" />
-              </a>
             </div>
           )}
-
-          {!supabaseConfig && !supabasePAT && !supabaseUser && (
-            <div className="rounded-xl bg-[rgba(16,185,129,0.02)] border border-[rgba(16,185,129,0.06)] p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <Database className="h-4 w-4 text-[#10b981]" />
-                <span className="text-xs font-medium text-white">Supabase Account</span>
-              </div>
-              <p className="text-[11px] text-[#64748b] leading-relaxed">
-                Sign in to sync your API keys, sessions, and settings across devices with end-to-end security.
-              </p>
-              <Button
-                onClick={onSignIn}
-                className="w-full mt-2 bg-gradient-to-r from-[#10b981] to-[#059669] hover:brightness-110 text-white h-8 rounded-lg font-medium text-[11px] transition-all duration-200 gap-1.5"
-              >
-                <UserIcon className="h-3 w-3" />
-                Sign In to Supabase
-              </Button>
-            </div>
-          )}
-
-          <button
-            onClick={onResetSupabase}
-            className="w-full text-[10px] text-[#4a4a5a] hover:text-[#64748b] transition-colors text-center py-1"
-          >
-            Change Supabase project configuration
-          </button>
         </div>
 
-        <Separator className="bg-[rgba(255,255,255,0.04)]" />
+        <Separator className="bg-[var(--wa-border)]" />
+
+        {/* GitHub Token Section */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Github className="h-4 w-4 text-[#00a884]" />
+            <h4 className="text-xs font-semibold text-[var(--wa-text-muted)] uppercase tracking-wider">GitHub</h4>
+          </div>
+
+          {githubToken && githubUser ? (
+            <div className="glass-card rounded-lg p-3">
+              <div className="flex items-center gap-3">
+                <img
+                  src={githubUser.avatar_url}
+                  alt={githubUser.login}
+                  className="h-8 w-8 rounded-full border border-[var(--wa-border)]"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium text-[var(--wa-text)] truncate">{githubUser.name || githubUser.login}</p>
+                  <p className="text-[10px] text-[var(--wa-text-muted)] font-mono">@{githubUser.login}</p>
+                </div>
+              </div>
+              <button
+                onClick={handleDisconnect}
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 mt-2 rounded-lg text-[10px] text-[#ef4444] hover:bg-[rgba(239,68,68,0.08)] transition-all duration-200"
+              >
+                <Unplug className="h-3 w-3" />
+                Disconnect GitHub
+              </button>
+            </div>
+          ) : (
+            <div className="rounded-lg bg-[rgba(0,168,132,0.04)] border border-[rgba(0,168,132,0.1)] p-3">
+              <p className="text-[10px] text-[var(--wa-text-muted)] mb-2">
+                Connect your GitHub account to create repositories and add sources.
+              </p>
+              <div className="space-y-1.5">
+                <Input
+                  type="password"
+                  placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                  value={tokenInput}
+                  onChange={(e) => { setTokenInput(e.target.value); setConnectError(null); }}
+                  disabled={isConnecting}
+                  className="input-refined border-[var(--wa-input-border)] text-[var(--wa-text)] placeholder:text-[var(--wa-text-muted)] focus:border-[rgba(0,168,132,0.3)] h-8 rounded-lg text-[11px] font-mono"
+                />
+                <Button
+                  onClick={handleConnect}
+                  disabled={isConnecting || !tokenInput.trim()}
+                  className="w-full bg-gradient-to-r from-[#00a884] to-[#008069] hover:brightness-110 text-white h-8 rounded-lg font-medium text-[11px] transition-all duration-200 disabled:opacity-50 gap-1.5"
+                >
+                  {isConnecting ? (
+                    <>
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Verifying...
+                    </>
+                  ) : (
+                    <>
+                      <Github className="h-3 w-3" />
+                      Connect GitHub
+                    </>
+                  )}
+                </Button>
+              </div>
+              {connectError && (
+                <p className="mt-1.5 text-[10px] text-[#ef4444]">{connectError}</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        <Separator className="bg-[var(--wa-border)]" />
 
         {/* Render Section */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Cloud className="h-4 w-4 text-[#ff6b35]" />
-            <h4 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">Render</h4>
+            <h4 className="text-xs font-semibold text-[var(--wa-text-muted)] uppercase tracking-wider">Render</h4>
           </div>
 
           {renderApiKey ? (
             <div className="glass-card rounded-lg p-3">
               <div className="flex items-center gap-2 mb-2">
-                <div className="h-6 w-6 rounded-md bg-[rgba(255,107,53,0.1)] flex items-center justify-center shrink-0">
+                <div className="h-6 w-6 rounded-lg bg-[rgba(255,107,53,0.1)] flex items-center justify-center shrink-0">
                   <Cloud className="h-3 w-3 text-[#ff6b35]" />
                 </div>
-                <span className="text-[11px] font-medium text-white">Render API</span>
+                <span className="text-[11px] font-medium text-[var(--wa-text)]">Render API</span>
                 <div className="ml-auto flex items-center gap-1">
                   <div className="h-1.5 w-1.5 rounded-full bg-[#10b981]" />
                   <span className="text-[9px] text-[#10b981] font-medium">Connected</span>
                 </div>
               </div>
-              <p className="text-[9px] text-[#4a4a5a] mb-2">
-                Manage services, databases, deploys, and more via the Render API.
-              </p>
               <button
                 onClick={handleDisconnectRender}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[10px] text-[#ef4444] hover:bg-[rgba(239,68,68,0.08)] transition-all duration-200"
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[10px] text-[#ef4444] hover:bg-[rgba(239,68,68,0.08)] transition-all duration-200"
               >
                 <Unplug className="h-3 w-3" />
                 Disconnect Render
               </button>
             </div>
           ) : (
-            <div className="rounded-lg bg-[rgba(255,107,53,0.02)] border border-[rgba(255,107,53,0.06)] p-3">
-              <div className="flex items-center gap-2 mb-1.5">
-                <Cloud className="h-3.5 w-3.5 text-[#64748b]" />
-                <span className="text-[11px] font-medium text-[#94a3b8]">Render API</span>
-              </div>
-              <p className="text-[10px] text-[#4a4a5a] mb-2">
-                Enter your API key to manage services, databases, and deploys on Render.
+            <div className="rounded-lg bg-[rgba(255,107,53,0.04)] border border-[rgba(255,107,53,0.1)] p-3">
+              <p className="text-[10px] text-[var(--wa-text-muted)] mb-2">
+                Connect your Render account to manage services, databases, and deploys.
               </p>
               <div className="space-y-1.5">
                 <Input
@@ -1123,8 +1213,7 @@ function SettingsView({
                   value={renderKeyInput}
                   onChange={(e) => { setRenderKeyInput(e.target.value); setRenderKeyError(null); }}
                   disabled={isConnectingRender}
-                  className="input-refined border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(255,107,53,0.3)] h-8 rounded-lg text-[11px] font-mono"
-                  onKeyDown={(e) => e.key === "Enter" && handleConnectRender()}
+                  className="input-refined border-[var(--wa-input-border)] text-[var(--wa-text)] placeholder:text-[var(--wa-text-muted)] focus:border-[rgba(255,107,53,0.3)] h-8 rounded-lg text-[11px] font-mono"
                 />
                 <Button
                   onClick={handleConnectRender}
@@ -1145,151 +1234,42 @@ function SettingsView({
                 </Button>
               </div>
               {renderKeyError && (
-                <div className="mt-2 rounded-md bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.15)] px-2.5 py-1.5 text-[10px] text-[#f87171]">
-                  {renderKeyError}
-                </div>
+                <p className="mt-1.5 text-[10px] text-[#ef4444]">{renderKeyError}</p>
               )}
-              <a
-                href="https://dashboard.render.com/u/settings#api-keys"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-[9px] text-[#ff6b35] hover:text-[#e55a2b] transition-colors mt-2"
-              >
-                Generate an API key on Render
-                <ExternalLink className="h-2 w-2" />
-              </a>
             </div>
           )}
         </div>
 
-        <Separator className="bg-[rgba(255,255,255,0.04)]" />
-
-        {/* GitHub Connection */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Github className="h-4 w-4 text-[#818cf8]" />
-            <h4 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">GitHub</h4>
-          </div>
-
-          {githubToken && githubUser ? (
-            <div className="space-y-3">
-              <div className="glass-card rounded-lg p-3">
-                <div className="flex items-center gap-3">
-                  {isLoadingUser ? (
-                    <Skeleton className="h-9 w-9 rounded-full bg-[rgba(255,255,255,0.03)]" />
-                  ) : (
-                    <img
-                      src={githubUser.avatar_url}
-                      alt={githubUser.login}
-                      className="h-9 w-9 rounded-full border border-[rgba(255,255,255,0.08)]"
-                    />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-white truncate">
-                      {githubUser.name || githubUser.login}
-                    </p>
-                    <p className="text-[11px] text-[#64748b] truncate">@{githubUser.login}</p>
-                  </div>
-                  <div className="h-2 w-2 rounded-full bg-[#10b981] shrink-0" title="Connected" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-[rgba(16,185,129,0.04)] border border-[rgba(16,185,129,0.08)]">
-                  <Globe className="h-3.5 w-3.5 text-[#10b981]" />
-                  <div>
-                    <p className="text-[10px] font-medium text-[#10b981]">Public repos</p>
-                    <p className="text-[9px] text-[#4a4a5a]">Full access</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-[rgba(245,158,11,0.04)] border border-[rgba(245,158,11,0.08)]">
-                  <Lock className="h-3.5 w-3.5 text-[#f59e0b]" />
-                  <div>
-                    <p className="text-[10px] font-medium text-[#f59e0b]">Private repos</p>
-                    <p className="text-[9px] text-[#4a4a5a]">Full access</p>
-                  </div>
-                </div>
-              </div>
-
-              <button
-                onClick={handleDisconnect}
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[#ef4444] hover:bg-[rgba(239,68,68,0.08)] transition-all duration-200 text-sm"
-              >
-                <Unplug className="h-4 w-4" />
-                Disconnect GitHub
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <div className="rounded-xl bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.04)] p-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <Github className="h-4 w-4 text-[#818cf8]" />
-                  <span className="text-xs font-medium text-white">Connect GitHub</span>
-                </div>
-                <p className="text-[11px] text-[#64748b] leading-relaxed">
-                  Create repos, manage code, and unlock full agent capabilities.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Input
-                  type="password"
-                  placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-                  value={tokenInput}
-                  onChange={(e) => { setTokenInput(e.target.value); setConnectError(null); }}
-                  disabled={isConnecting}
-                  className="input-refined border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(129,140,248,0.3)] input-glow h-9 rounded-lg text-xs font-mono transition-all duration-200"
-                />
-                <Button
-                  onClick={handleConnect}
-                  disabled={isConnecting || !tokenInput.trim()}
-                  className="w-full bg-gradient-agent hover:brightness-115 text-white h-9 rounded-lg font-medium text-sm transition-all duration-200 disabled:opacity-50 gap-2"
-                >
-                  {isConnecting ? (
-                    <>
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      Connecting...
-                    </>
-                  ) : (
-                    <>
-                      <Link2 className="h-3.5 w-3.5" />
-                      Connect GitHub
-                    </>
-                  )}
-                </Button>
-              </div>
-              {connectError && (
-                <div className="rounded-lg bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.15)] px-3 py-2 text-xs text-[#f87171] animate-fade-in">
-                  {connectError}
-                </div>
-              )}
-              <div className="space-y-1.5">
-                <p className="text-[10px] text-[#4a4a5a]">
-                  Requires <code className="text-[#64748b] bg-[rgba(255,255,255,0.03)] px-1 rounded">repo</code> scope
-                </p>
-                <a
-                  href="https://github.com/settings/tokens"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-[10px] text-[#818cf8] hover:text-[#6366f1] transition-colors"
-                >
-                  Create a token on GitHub
-                  <ExternalLink className="h-2.5 w-2.5" />
-                </a>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <Separator className="bg-[rgba(255,255,255,0.04)]" />
+        <Separator className="bg-[var(--wa-border)]" />
 
         {/* Disconnect Jules */}
-        <button
-          onClick={onDisconnect}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#ef4444] hover:bg-[rgba(239,68,68,0.08)] transition-all duration-200"
-        >
-          <LogOut className="h-4 w-4" />
-          <span className="text-sm">Disconnect Jules</span>
-        </button>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Zap className="h-4 w-4 text-[#00a884]" />
+            <h4 className="text-xs font-semibold text-[var(--wa-text-muted)] uppercase tracking-wider">Jules Agent</h4>
+          </div>
+          <button
+            onClick={onDisconnect}
+            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-[#ef4444] hover:bg-[rgba(239,68,68,0.08)] transition-all duration-200"
+          >
+            <Unplug className="h-4 w-4" />
+            <span className="text-sm">Disconnect Agent</span>
+          </button>
+        </div>
+
+        {/* Reset Supabase */}
+        {supabaseConfig && (
+          <>
+            <Separator className="bg-[var(--wa-border)]" />
+            <button
+              onClick={onResetSupabase}
+              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-[var(--wa-text-muted)] hover:text-[#f59e0b] hover:bg-[rgba(245,158,11,0.08)] transition-all duration-200"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="text-sm">Reset Supabase Config</span>
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
