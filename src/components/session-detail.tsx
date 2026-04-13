@@ -180,17 +180,19 @@ export function SessionDetail({ sessionId, apiKey }: SessionDetailProps) {
   return (
     <div className="flex-1 flex flex-col min-h-0" style={{ background: "#0a0a0f" }}>
       {/* Session Header */}
-      <div className="px-5 py-3.5 border-b border-[rgba(255,255,255,0.04)]" style={{ background: "rgba(12,12,20,0.8)" }}>
+      <div className="px-5 py-3.5 border-b border-[rgba(255,255,255,0.04)] relative" style={{ background: "rgba(12,12,20,0.8)" }}>
+        {/* Gradient top border */}
+        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent 0%, rgba(129, 140, 248, 0.2) 50%, transparent 100%)" }} />
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-3 mb-1.5">
               <div className="h-7 w-7 rounded-lg bg-gradient-agent flex items-center justify-center shrink-0">
                 <Zap className="h-3.5 w-3.5 text-white" />
               </div>
-              <h2 className="text-base font-semibold text-white truncate">
+              <h2 className="text-base font-semibold text-white truncate tracking-tight">
                 {session.title || "Untitled Session"}
               </h2>
-              <span className={`inline-flex items-center text-[10px] font-medium px-2 py-0.5 rounded-full border ${stateConfig.bg} ${stateConfig.color}`}>
+              <span className={`status-chip ${stateConfig.bg} ${stateConfig.color}`}>
                 {stateConfig.label}
               </span>
             </div>
@@ -225,7 +227,7 @@ export function SessionDetail({ sessionId, apiKey }: SessionDetailProps) {
               <Button
                 onClick={handleApprove}
                 disabled={isApproving}
-                className="bg-gradient-to-r from-[#10b981] to-[#059669] hover:brightness-110 text-white gap-1.5 h-8 rounded-lg text-xs font-medium shadow-md transition-all duration-200"
+                className="bg-gradient-to-r from-[#10b981] to-[#059669] hover:brightness-110 text-white gap-1.5 h-8 rounded-lg text-xs font-medium shadow-md transition-all duration-200 interaction-scale animate-subtle-pulse"
                 size="sm"
               >
                 {isApproving ? (
@@ -243,7 +245,7 @@ export function SessionDetail({ sessionId, apiKey }: SessionDetailProps) {
                 href={session.output.pullRequestUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-[11px] text-[#818cf8] hover:text-[#6366f1] transition-colors px-2.5 py-1.5 rounded-md bg-[rgba(129,140,248,0.06)] border border-[rgba(129,140,248,0.1)] hover:bg-[rgba(129,140,248,0.1)]"
+                className="inline-flex items-center gap-1.5 text-[11px] text-[#818cf8] hover:text-[#6366f1] transition-colors px-2.5 py-1.5 rounded-md glass-card-refined hover-lift"
               >
                 View PR <ExternalLink className="h-3 w-3" />
               </a>
@@ -268,7 +270,8 @@ export function SessionDetail({ sessionId, apiKey }: SessionDetailProps) {
       </div>
 
       {/* Message Input */}
-      <div className="p-3 border-t border-[rgba(255,255,255,0.04)]" style={{ background: "rgba(12,12,20,0.8)" }}>
+      <div className="p-3 border-t border-[rgba(255,255,255,0.04)] relative" style={{ background: "rgba(12,12,20,0.8)" }}>
+        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent 0%, rgba(129, 140, 248, 0.1) 50%, transparent 100%)" }} />
         <div className="flex gap-2 items-center">
           <div className="flex-1 relative">
             <Input
@@ -277,7 +280,7 @@ export function SessionDetail({ sessionId, apiKey }: SessionDetailProps) {
               onChange={(e) => setMessageInput(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={isSending || isCompleted}
-              className="bg-[#0d1117] border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(129,140,248,0.3)] input-glow h-10 rounded-xl pr-10 text-sm transition-all duration-200 disabled:opacity-50"
+              className="input-refined text-white placeholder:text-[#3a3a4a] h-10 rounded-2xl pr-10 text-sm disabled:opacity-50"
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
               <Zap className="h-4 w-4 text-[#2a2a3a]" />
@@ -287,7 +290,7 @@ export function SessionDetail({ sessionId, apiKey }: SessionDetailProps) {
             onClick={handleSendMessage}
             disabled={isSending || !messageInput.trim() || isCompleted}
             size="icon"
-            className="bg-gradient-agent hover:brightness-115 text-white shrink-0 h-10 w-10 rounded-xl shadow-md transition-all duration-200 disabled:opacity-50"
+            className="bg-gradient-agent hover:brightness-115 text-white shrink-0 h-10 w-10 rounded-xl shadow-md hover-lift disabled:opacity-50"
           >
             {isSending ? (
               <Loader2 className="h-4 w-4 animate-spin" />

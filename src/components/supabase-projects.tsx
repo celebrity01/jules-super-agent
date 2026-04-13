@@ -320,7 +320,7 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
                   value={tokenInput}
                   onChange={(e) => { setTokenInput(e.target.value); setConnectError(null); }}
                   disabled={isConnecting}
-                  className="bg-[#0d1117] border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(16,185,129,0.3)] h-9 rounded-lg text-xs font-mono"
+                  className="input-refined border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(16,185,129,0.3)] h-9 rounded-lg text-xs font-mono"
                 />
                 <Button
                   onClick={handleConnect}
@@ -453,7 +453,7 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
               </div>
               <select
                 id="render-deploy-select"
-                className="w-full h-7 rounded-md bg-[#0d1117] border border-[rgba(255,255,255,0.06)] text-white text-[10px] px-2 mb-1.5 focus:border-[rgba(255,107,53,0.3)] focus:outline-none"
+                className="w-full h-7 rounded-md input-refined border border-[rgba(255,255,255,0.06)] text-white text-[10px] px-2 mb-1.5 focus:border-[rgba(255,107,53,0.3)] focus:outline-none"
                 defaultValue=""
               >
                 <option value="" disabled>Select a Render service to deploy</option>
@@ -490,14 +490,14 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
           <div className="p-4 space-y-4">
             {/* Project Info */}
             <div className="grid grid-cols-2 gap-2">
-              <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.04)]">
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg glass-card-refined">
                 <MapPin className="h-3.5 w-3.5 text-[#10b981] shrink-0" />
                 <div>
                   <p className="text-[10px] text-[#64748b]">Region</p>
                   <p className="text-[11px] text-white font-medium">{getRegionName(selectedProject.region)}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.04)]">
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg glass-card-refined">
                 <Clock className="h-3.5 w-3.5 text-[#818cf8] shrink-0" />
                 <div>
                   <p className="text-[10px] text-[#64748b]">Created</p>
@@ -505,7 +505,7 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
                 </div>
               </div>
               {selectedProject.database && (
-                <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.04)]">
+                <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg glass-card-refined">
                   <Server className="h-3.5 w-3.5 text-[#f59e0b] shrink-0" />
                   <div>
                     <p className="text-[10px] text-[#64748b]">Postgres</p>
@@ -513,7 +513,7 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
                   </div>
                 </div>
               )}
-              <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.04)]">
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg glass-card-refined">
                 <Globe className="h-3.5 w-3.5 text-[#818cf8] shrink-0" />
                 <div>
                   <p className="text-[10px] text-[#64748b]">Host</p>
@@ -534,7 +534,7 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
                   {projectHealth.map((service) => (
                     <div
                       key={service.name}
-                      className="flex items-center justify-between px-3 py-2 rounded-lg bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.04)]"
+                      className="flex items-center justify-between px-3 py-2 rounded-lg glass-card-refined"
                     >
                       <div className="flex items-center gap-2">
                         <div className={`h-2 w-2 rounded-full ${service.healthy ? "bg-[#10b981]" : "bg-[#ef4444]"}`} />
@@ -565,7 +565,7 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
                     return (
                       <div
                         key={key.id}
-                        className="px-3 py-2 rounded-lg bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.04)]"
+                        className="px-3 py-2 rounded-lg glass-card-refined"
                       >
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-2">
@@ -617,7 +617,7 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
                   {projectBranches.map((branch) => (
                     <div
                       key={branch.id}
-                      className="flex items-center justify-between px-3 py-2 rounded-lg bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.04)]"
+                      className="flex items-center justify-between px-3 py-2 rounded-lg glass-card-refined"
                     >
                       <div className="flex items-center gap-2">
                         <GitBranch className="h-3 w-3 text-[#818cf8]" />
@@ -724,7 +724,7 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
                   value={createForm.name}
                   onChange={(e) => setCreateForm((f) => ({ ...f, name: e.target.value }))}
                   placeholder="my-awesome-project"
-                  className="bg-[#0d1117] border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(16,185,129,0.3)] h-9 rounded-lg text-xs"
+                  className="input-refined border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(16,185,129,0.3)] h-9 rounded-lg text-xs"
                 />
               </div>
 
@@ -738,7 +738,7 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
                   value={createForm.db_pass}
                   onChange={(e) => setCreateForm((f) => ({ ...f, db_pass: e.target.value }))}
                   placeholder="Strong database password"
-                  className="bg-[#0d1117] border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(16,185,129,0.3)] h-9 rounded-lg text-xs"
+                  className="input-refined border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(16,185,129,0.3)] h-9 rounded-lg text-xs"
                 />
               </div>
 
@@ -750,7 +750,7 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
                 <select
                   value={createForm.organization_slug}
                   onChange={(e) => setCreateForm((f) => ({ ...f, organization_slug: e.target.value }))}
-                  className="w-full h-9 rounded-lg bg-[#0d1117] border border-[rgba(255,255,255,0.06)] text-white text-xs px-3 focus:border-[rgba(16,185,129,0.3)] focus:outline-none"
+                  className="w-full h-9 rounded-lg input-refined border border-[rgba(255,255,255,0.06)] text-white text-xs px-3 focus:border-[rgba(16,185,129,0.3)] focus:outline-none"
                 >
                   <option value="">Select organization</option>
                   {organizations.map((org) => (
@@ -769,7 +769,7 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
                 <select
                   value={createForm.region}
                   onChange={(e) => setCreateForm((f) => ({ ...f, region: e.target.value }))}
-                  className="w-full h-9 rounded-lg bg-[#0d1117] border border-[rgba(255,255,255,0.06)] text-white text-xs px-3 focus:border-[rgba(16,185,129,0.3)] focus:outline-none"
+                  className="w-full h-9 rounded-lg input-refined border border-[rgba(255,255,255,0.06)] text-white text-xs px-3 focus:border-[rgba(16,185,129,0.3)] focus:outline-none"
                 >
                   {[
                     ["us-east-1", "US East (N. Virginia)"],
@@ -894,7 +894,7 @@ export function SupabaseProjects({ onBack, onPATChange, renderApiKey, renderServ
                 <button
                   key={project.id}
                   onClick={() => loadProjectDetail(project)}
-                  className="w-full text-left rounded-lg px-3 py-3 bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.04)] hover:border-[rgba(255,255,255,0.06)] transition-all duration-200"
+                  className="w-full text-left rounded-lg px-3 py-3 glass-card-refined hover-lift"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">

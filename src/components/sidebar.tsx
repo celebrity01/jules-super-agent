@@ -176,9 +176,9 @@ export function Sidebar({
   }, [githubToken]);
 
   return (
-    <div className="w-[300px] flex flex-col h-full border-r border-[rgba(255,255,255,0.04)]" style={{ background: "#0c0c14" }}>
+    <div className="w-[300px] flex flex-col h-full border-r border-[rgba(255,255,255,0.04)]" style={{ background: "linear-gradient(180deg, #0c0c16 0%, #0a0a12 50%, #0c0c16 100%)" }}>
       {/* Agent Status Card */}
-      <div className="p-4 border-b border-[rgba(255,255,255,0.04)]">
+      <div className="p-4 border-b border-[rgba(255,255,255,0.04)] agent-status-card rounded-none border-t-0 border-l-0 border-r-0" style={{ background: "linear-gradient(135deg, rgba(12, 12, 20, 0.9) 0%, rgba(16, 16, 28, 0.85) 100%)" }}>
         <div className="flex items-center gap-3 mb-3">
           {supabaseUser ? (
             // Show user avatar when logged in
@@ -224,7 +224,7 @@ export function Sidebar({
 
         {/* API Key display */}
         <div className="flex items-center gap-2">
-          <div className="flex-1 flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.04)]">
+          <div className="flex-1 flex items-center gap-1.5 px-2.5 py-1.5 rounded-md glass-card-refined">
             <Key className="h-3 w-3 text-[#64748b]" />
             <code className="text-[10px] font-mono text-[#64748b] flex-1">{maskedKey}</code>
           </div>
@@ -236,30 +236,30 @@ export function Sidebar({
           </button>
         </div>
 
-        {/* Quick badges row */}
-        <div className="flex items-center gap-2 mt-2.5 px-1">
+        {/* Quick badges row — glassy pills */}
+        <div className="flex items-center gap-2.5 mt-3 px-0.5">
           {githubToken && githubUser && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.04)] flex-1">
-              <Github className="h-3 w-3 text-[#818cf8]" />
-              <span className="text-[10px] text-[#818cf8] font-medium">GitHub</span>
+            <div className="glass-pill glass-pill-accent flex-1 px-2.5 py-1">
+              <Github className="h-3 w-3" />
+              <span>GitHub</span>
             </div>
           )}
           {(supabaseUser || supabasePAT || getSupabaseConfig()) && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[rgba(16,185,129,0.04)] border border-[rgba(16,185,129,0.08)] flex-1">
-              <Database className="h-3 w-3 text-[#10b981]" />
-              <span className="text-[10px] text-[#10b981] font-medium">Supabase</span>
+            <div className="glass-pill glass-pill-success flex-1 px-2.5 py-1">
+              <Database className="h-3 w-3" />
+              <span>Supabase</span>
             </div>
           )}
           {renderApiKey && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[rgba(255,107,53,0.04)] border border-[rgba(255,107,53,0.08)] flex-1">
-              <Cloud className="h-3 w-3 text-[#ff6b35]" />
-              <span className="text-[10px] text-[#ff6b35] font-medium">Render</span>
+            <div className="glass-pill glass-pill-orange flex-1 px-2.5 py-1">
+              <Cloud className="h-3 w-3" />
+              <span>Render</span>
             </div>
           )}
           {!supabaseUser && !supabasePAT && !getSupabaseConfig() && !githubToken && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[rgba(245,158,11,0.04)] border border-[rgba(245,158,11,0.08)] flex-1">
-              <Shield className="h-3 w-3 text-[#f59e0b]" />
-              <span className="text-[10px] text-[#f59e0b] font-medium">Local only</span>
+            <div className="glass-pill glass-pill-warning flex-1 px-2.5 py-1">
+              <Shield className="h-3 w-3" />
+              <span>Local only</span>
             </div>
           )}
           {(githubToken || supabaseUser) && (
@@ -348,7 +348,7 @@ export function Sidebar({
             )}
             <Button
               onClick={onNewSession}
-              className={`${githubToken ? 'flex-1' : 'w-full'} bg-gradient-agent hover:brightness-115 text-white gap-1.5 h-9 rounded-lg font-medium text-sm transition-all duration-200`}
+              className={`${githubToken ? 'flex-1' : 'w-full'} bg-gradient-premium text-white gap-1.5 h-9 rounded-lg font-medium text-sm interaction-scale`}
               size="sm"
             >
               <Plus className="h-4 w-4" />
@@ -447,7 +447,7 @@ function SessionsView({
                 {sources.map((source) => (
                   <div
                     key={source.name}
-                    className="flex items-center gap-2 px-2 py-1.5 rounded-md text-[#94a3b8] hover:bg-[rgba(255,255,255,0.03)] hover:text-white transition-all duration-200"
+                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[#94a3b8] hover:bg-[rgba(255,255,255,0.03)] hover:text-white transition-all duration-200 glass-card-refined"
                   >
                     <GitBranch className="h-3 w-3 text-[#4a4a5a] shrink-0" />
                     <span className="truncate text-xs font-mono">{getSourceDisplayName(source)}</span>
@@ -468,7 +468,7 @@ function SessionsView({
         )}
       </div>
 
-      <Separator className="bg-[rgba(255,255,255,0.04)] mx-3 my-2" />
+      <div className="divider-refined mx-3 my-2" />
 
       {/* Sessions */}
       <div className="px-3">
@@ -521,10 +521,10 @@ function SessionsView({
                 <button
                   key={session.name}
                   onClick={() => onSelectSession(sessionId)}
-                  className={`w-full text-left px-3 py-2.5 rounded-lg transition-all duration-200 ${
+                  className={`w-full text-left px-3 py-2.5 rounded-lg hover-lift ${
                     isSelected
-                      ? "bg-[rgba(129,140,248,0.08)] border-l-2 border-l-[#818cf8]"
-                      : "hover:bg-[rgba(255,255,255,0.03)] border-l-2 border-l-transparent"
+                      ? "session-item-refined-active"
+                      : "session-item-refined"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -534,7 +534,7 @@ function SessionsView({
                     <div className={`h-2 w-2 rounded-full shrink-0 mt-1.5 ${getStateDotColor(session.state)}`} />
                   </div>
                   <div className="flex items-center gap-2 mt-1.5">
-                    <span className={`inline-flex items-center text-[9px] font-medium px-1.5 py-0.5 rounded border ${stateConfig.bg} ${stateConfig.color}`}>
+                    <span className={`badge-refined ${stateConfig.bg} ${stateConfig.color}`}>
                       {stateConfig.label}
                     </span>
                     {session.createTime && (
@@ -1011,7 +1011,7 @@ function SettingsView({
                   value={patInput}
                   onChange={(e) => { setPatInput(e.target.value); setPatError(null); }}
                   disabled={isConnectingPAT}
-                  className="bg-[#0d1117] border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(16,185,129,0.3)] h-8 rounded-lg text-[11px] font-mono"
+                  className="input-refined border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(16,185,129,0.3)] h-8 rounded-lg text-[11px] font-mono"
                 />
                 <Button
                   onClick={handleConnectPAT}
@@ -1123,7 +1123,7 @@ function SettingsView({
                   value={renderKeyInput}
                   onChange={(e) => { setRenderKeyInput(e.target.value); setRenderKeyError(null); }}
                   disabled={isConnectingRender}
-                  className="bg-[#0d1117] border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(255,107,53,0.3)] h-8 rounded-lg text-[11px] font-mono"
+                  className="input-refined border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(255,107,53,0.3)] h-8 rounded-lg text-[11px] font-mono"
                   onKeyDown={(e) => e.key === "Enter" && handleConnectRender()}
                 />
                 <Button
@@ -1237,7 +1237,7 @@ function SettingsView({
                   value={tokenInput}
                   onChange={(e) => { setTokenInput(e.target.value); setConnectError(null); }}
                   disabled={isConnecting}
-                  className="bg-[#0d1117] border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(129,140,248,0.3)] input-glow h-9 rounded-lg text-xs font-mono transition-all duration-200"
+                  className="input-refined border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(129,140,248,0.3)] input-glow h-9 rounded-lg text-xs font-mono transition-all duration-200"
                 />
                 <Button
                   onClick={handleConnect}

@@ -122,7 +122,7 @@ export function NewSessionDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               disabled={isLoading}
-              className="bg-[#0d1117] border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(129,140,248,0.3)] input-glow h-10 rounded-lg text-sm transition-all duration-200"
+              className="input-refined border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(129,140,248,0.3)] input-glow h-10 rounded-lg text-sm transition-all duration-200"
             />
           </div>
 
@@ -138,7 +138,7 @@ export function NewSessionDialog({
               onChange={(e) => setPrompt(e.target.value)}
               disabled={isLoading}
               rows={4}
-              className="bg-[#0d1117] border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(129,140,248,0.3)] input-glow rounded-lg text-sm transition-all duration-200 resize-none"
+              className="input-refined border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(129,140,248,0.3)] input-glow rounded-lg text-sm transition-all duration-200 resize-none"
             />
           </div>
 
@@ -153,7 +153,7 @@ export function NewSessionDialog({
               onValueChange={setSelectedSource}
               disabled={isLoading || sources.length === 0}
             >
-              <SelectTrigger className="bg-[#0d1117] border-[rgba(255,255,255,0.06)] text-white h-10 rounded-lg focus:border-[rgba(129,140,248,0.3)] transition-all duration-200">
+              <SelectTrigger className="input-refined border-[rgba(255,255,255,0.06)] text-white h-10 rounded-lg focus:border-[rgba(129,140,248,0.3)] transition-all duration-200">
                 <SelectValue
                   placeholder={
                     sources.length === 0
@@ -187,7 +187,7 @@ export function NewSessionDialog({
               value={startingBranch}
               onChange={(e) => setStartingBranch(e.target.value)}
               disabled={isLoading}
-              className="bg-[#0d1117] border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(129,140,248,0.3)] input-glow h-10 rounded-lg text-sm font-mono transition-all duration-200"
+              className="input-refined border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(129,140,248,0.3)] input-glow h-10 rounded-lg text-sm font-mono transition-all duration-200"
             />
           </div>
 
@@ -202,7 +202,7 @@ export function NewSessionDialog({
                 type="button"
                 onClick={() => setAutomationMode("none")}
                 disabled={isLoading}
-                className={`relative flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all duration-200 ${
+                className={`relative flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all duration-200 interaction-scale ${
                   automationMode === "none"
                     ? "bg-[rgba(129,140,248,0.08)] border-[rgba(129,140,248,0.2)] text-[#818cf8]"
                     : "bg-[rgba(255,255,255,0.02)] border-[rgba(255,255,255,0.04)] text-[#64748b] hover:border-[rgba(255,255,255,0.08)] hover:text-[#94a3b8]"
@@ -215,7 +215,7 @@ export function NewSessionDialog({
                 type="button"
                 onClick={() => setAutomationMode("AUTO_CREATE_PR")}
                 disabled={isLoading}
-                className={`relative flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all duration-200 ${
+                className={`relative flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all duration-200 interaction-scale ${
                   automationMode === "AUTO_CREATE_PR"
                     ? "bg-[rgba(129,140,248,0.08)] border-[rgba(129,140,248,0.2)] text-[#818cf8]"
                     : "bg-[rgba(255,255,255,0.02)] border-[rgba(255,255,255,0.04)] text-[#64748b] hover:border-[rgba(255,255,255,0.08)] hover:text-[#94a3b8]"
@@ -262,7 +262,7 @@ export function NewSessionDialog({
           <Button
             onClick={handleCreate}
             disabled={isLoading || !prompt.trim() || !selectedSource}
-            className="flex-1 bg-gradient-agent hover:brightness-115 text-white h-10 rounded-lg font-medium shadow-md transition-all duration-200 disabled:opacity-50"
+            className="flex-1 bg-gradient-premium text-white h-10 rounded-lg font-medium shadow-md transition-all duration-200 disabled:opacity-50 interaction-scale"
           >
             {isLoading ? (
               <div className="flex items-center gap-2">

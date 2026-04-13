@@ -254,7 +254,7 @@ export function RenderPanel({ renderApiKey, onApiKeyChange, supabasePAT, supabas
           <Cloud className="h-4 w-4 text-[#ff6b35]" />
           <h3 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">Render</h3>
         </div>
-        <div className="rounded-xl bg-[rgba(255,107,53,0.02)] border border-[rgba(255,107,53,0.08)] p-4">
+        <div className="rounded-xl bg-[rgba(255,107,53,0.02)] border border-[rgba(255,107,53,0.08)] p-4 glass-card-orange">
           <div className="flex items-center gap-2 mb-2">
             <Cloud className="h-5 w-5 text-[#ff6b35]" />
             <span className="text-sm font-medium text-white">Connect to Render</span>
@@ -269,7 +269,7 @@ export function RenderPanel({ renderApiKey, onApiKeyChange, supabasePAT, supabas
               value={keyInput}
               onChange={(e) => { setKeyInput(e.target.value); setConnectError(null); }}
               disabled={isConnecting}
-              className="bg-[#0d1117] border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(255,107,53,0.3)] h-9 rounded-lg text-xs font-mono"
+              className="input-refined border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#3a3a4a] focus:border-[rgba(255,107,53,0.3)] h-9 rounded-lg text-xs font-mono"
               onKeyDown={(e) => e.key === "Enter" && handleConnect()}
             />
             <Button
@@ -318,7 +318,7 @@ export function RenderPanel({ renderApiKey, onApiKeyChange, supabasePAT, supabas
         {/* Back button */}
         <button
           onClick={() => { setDetailView("list"); setSelectedService(null); }}
-          className="flex items-center gap-1.5 text-[11px] text-[#64748b] hover:text-white transition-colors mb-3"
+          className="flex items-center gap-1.5 text-[11px] text-[#64748b] hover:text-white hover:bg-[rgba(255,255,255,0.04)] rounded-md px-1.5 py-1 transition-all duration-200 mb-3"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
           Back to services
@@ -390,10 +390,10 @@ export function RenderPanel({ renderApiKey, onApiKeyChange, supabasePAT, supabas
 
         {/* Cross-service actions */}
         {supabasePAT && (
-          <div className="mb-4">
+          <div className="mb-4 cross-service-section p-3" style={{ background: "linear-gradient(135deg, rgba(16,185,129,0.04) 0%, rgba(129,140,248,0.04) 100%)" }}>
             <div className="flex items-center gap-1.5 mb-2">
               <Link2 className="h-3 w-3 text-[#10b981]" />
-              <span className="text-[9px] font-semibold text-[#64748b] uppercase tracking-wider">Cross-Service</span>
+              <span className="text-[9px] font-semibold text-[#10b981] uppercase tracking-wider">Cross-Service</span>
             </div>
             {crossServiceResult && (
               <div className={`mb-2 rounded-md px-2.5 py-1.5 text-[10px] ${crossServiceResult.success ? "bg-[rgba(16,185,129,0.08)] border border-[rgba(16,185,129,0.15)] text-[#10b981]" : "bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.15)] text-[#f87171]"}`}>
@@ -480,11 +480,11 @@ export function RenderPanel({ renderApiKey, onApiKeyChange, supabasePAT, supabas
               <p className="text-[10px] text-[#4a4a5a]">No deploys found</p>
             </div>
           ) : (
-            <div className="space-y-1.5">
-              {deploys.slice(0, 10).map((deploy) => {
+            <div className="space-y-1.5 timeline-line pl-1">
+              {deploys.slice(0, 10).map((deploy, index) => {
                 const deployColor = getDeployStatusColor(deploy.status);
                 return (
-                  <div key={deploy.id} className="glass-card rounded-lg px-3 py-2">
+                  <div key={deploy.id} className={`glass-card rounded-lg px-3 py-2 relative ${index === 0 ? "glass-card-accent" : ""}`}>
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
                         <div className={`h-2 w-2 rounded-full shrink-0 ${deployColor.dot}`} />
@@ -518,7 +518,7 @@ export function RenderPanel({ renderApiKey, onApiKeyChange, supabasePAT, supabas
       <div className="p-4">
         <button
           onClick={() => { setDetailView("list"); setSelectedPostgres(null); }}
-          className="flex items-center gap-1.5 text-[11px] text-[#64748b] hover:text-white transition-colors mb-3"
+          className="flex items-center gap-1.5 text-[11px] text-[#64748b] hover:text-white hover:bg-[rgba(255,255,255,0.04)] rounded-md px-1.5 py-1 transition-all duration-200 mb-3"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
           Back to databases
@@ -569,7 +569,7 @@ export function RenderPanel({ renderApiKey, onApiKeyChange, supabasePAT, supabas
       <div className="p-4">
         <button
           onClick={() => { setDetailView("list"); setSelectedKeyValue(null); }}
-          className="flex items-center gap-1.5 text-[11px] text-[#64748b] hover:text-white transition-colors mb-3"
+          className="flex items-center gap-1.5 text-[11px] text-[#64748b] hover:text-white hover:bg-[rgba(255,255,255,0.04)] rounded-md px-1.5 py-1 transition-all duration-200 mb-3"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
           Back to datastores
@@ -632,14 +632,14 @@ export function RenderPanel({ renderApiKey, onApiKeyChange, supabasePAT, supabas
       </div>
 
       {/* Connection status card */}
-      <div className="glass-card rounded-lg p-3 mb-4">
+      <div className="glass-card-refined glass-card-orange rounded-lg p-3 mb-4">
         <div className="flex items-center gap-2 mb-2">
           <div className="h-6 w-6 rounded-md bg-[rgba(255,107,53,0.1)] flex items-center justify-center shrink-0">
             <Cloud className="h-3 w-3 text-[#ff6b35]" />
           </div>
           <span className="text-[11px] font-medium text-white">Render API</span>
           <div className="ml-auto flex items-center gap-1">
-            <div className="h-1.5 w-1.5 rounded-full bg-[#10b981]" />
+            <div className="connection-dot connection-dot-green" style={{ background: "#ff6b35", boxShadow: "0 0 8px rgba(255, 107, 53, 0.5)" }} />
             <span className="text-[9px] text-[#10b981] font-medium">Connected</span>
           </div>
         </div>
@@ -693,7 +693,7 @@ export function RenderPanel({ renderApiKey, onApiKeyChange, supabasePAT, supabas
                     <button
                       key={service.id}
                       onClick={() => handleServiceClick(service)}
-                      className="w-full text-left glass-card-hover rounded-lg px-3 py-2.5"
+                      className={`w-full text-left glass-card-hover hover-lift rounded-lg px-3 py-2.5 ${svcStatus === "live" ? "glass-card-success" : svcStatus === "failed" ? "glass-card-error" : ""}`}
                     >
                       <div className="flex items-center gap-2.5">
                         <div className={`h-8 w-8 rounded-md ${statusColor.bg} border flex items-center justify-center shrink-0`}>
@@ -733,7 +733,7 @@ export function RenderPanel({ renderApiKey, onApiKeyChange, supabasePAT, supabas
                   <button
                     key={pg.id}
                     onClick={() => { setSelectedPostgres(pg); setDetailView("postgres"); }}
-                    className="w-full text-left glass-card-hover rounded-lg px-3 py-2.5"
+                    className="w-full text-left glass-card-hover hover-lift rounded-lg px-3 py-2.5"
                   >
                     <div className="flex items-center gap-2.5">
                       <div className="h-8 w-8 rounded-md bg-[rgba(129,140,248,0.1)] border border-[rgba(129,140,248,0.2)] flex items-center justify-center shrink-0">
@@ -772,7 +772,7 @@ export function RenderPanel({ renderApiKey, onApiKeyChange, supabasePAT, supabas
                   <button
                     key={kv.id}
                     onClick={() => { setSelectedKeyValue(kv); setDetailView("keyvalue"); }}
-                    className="w-full text-left glass-card-hover rounded-lg px-3 py-2.5"
+                    className="w-full text-left glass-card-hover hover-lift rounded-lg px-3 py-2.5"
                   >
                     <div className="flex items-center gap-2.5">
                       <div className="h-8 w-8 rounded-md bg-[rgba(245,158,11,0.1)] border border-[rgba(245,158,11,0.2)] flex items-center justify-center shrink-0">

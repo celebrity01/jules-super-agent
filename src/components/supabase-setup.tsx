@@ -89,7 +89,7 @@ export function SupabaseSetup({ onConfigured, onSkip }: SupabaseSetupProps) {
       <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{ background: "#0a0a0f" }}>
         <div className="absolute inset-0 bg-grid-pattern opacity-50" />
         <div className="relative z-10 w-full max-w-md mx-4">
-          <div className="glass-card rounded-2xl p-8 text-center animate-fade-in-up">
+          <div className="glass-card-refined rounded-2xl p-8 text-center animate-smooth-appear">
             <div className="flex justify-center mb-4">
               <div className="h-16 w-16 rounded-2xl bg-[rgba(16,185,129,0.1)] flex items-center justify-center glow-success">
                 <CheckCircle2 className="h-8 w-8 text-[#10b981]" />
@@ -125,7 +125,7 @@ export function SupabaseSetup({ onConfigured, onSkip }: SupabaseSetupProps) {
 
       {/* Main card */}
       <div className="relative z-10 w-full max-w-md mx-4">
-        <div className="glass-card rounded-2xl p-8 animate-fade-in-up animate-glow-pulse">
+        <div className="glass-card-refined rounded-2xl p-8 animate-smooth-appear animate-glow-pulse">
           {/* Icon */}
           <div className="flex justify-center mb-6">
             <div className="relative">
@@ -167,7 +167,7 @@ export function SupabaseSetup({ onConfigured, onSkip }: SupabaseSetupProps) {
                 }}
                 onKeyDown={handleKeyDown}
                 disabled={isLoading}
-                className="pl-10 font-mono bg-[#0d1117] border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#4a4a5a] focus:border-[rgba(16,185,129,0.3)] input-glow h-11 rounded-lg transition-all duration-200"
+                className="pl-10 font-mono input-refined text-white placeholder:text-[#4a4a5a] focus:border-[rgba(16,185,129,0.3)] input-glow h-11 rounded-lg transition-all duration-200"
               />
             </div>
           </div>
@@ -190,7 +190,7 @@ export function SupabaseSetup({ onConfigured, onSkip }: SupabaseSetupProps) {
                 }}
                 onKeyDown={handleKeyDown}
                 disabled={isLoading}
-                className="pl-10 font-mono bg-[#0d1117] border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#4a4a5a] focus:border-[rgba(16,185,129,0.3)] input-glow h-11 rounded-lg transition-all duration-200"
+                className="pl-10 font-mono input-refined text-white placeholder:text-[#4a4a5a] focus:border-[rgba(16,185,129,0.3)] input-glow h-11 rounded-lg transition-all duration-200"
               />
             </div>
           </div>
@@ -206,7 +206,7 @@ export function SupabaseSetup({ onConfigured, onSkip }: SupabaseSetupProps) {
           <Button
             onClick={handleConnect}
             disabled={isLoading || !url.trim() || !anonKey.trim()}
-            className="w-full bg-gradient-to-r from-[#10b981] to-[#059669] hover:brightness-110 text-white h-11 rounded-lg font-semibold transition-all duration-200 shadow-lg disabled:opacity-50"
+            className="w-full bg-gradient-premium text-white h-11 rounded-lg font-semibold transition-all duration-200 shadow-lg disabled:opacity-50 interaction-scale"
             size="lg"
           >
             {isLoading ? (

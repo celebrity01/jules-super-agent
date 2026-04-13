@@ -63,7 +63,7 @@ export function ApiKeySetup({ onConnect }: ApiKeySetupProps) {
 
       {/* Main card */}
       <div className="relative z-10 w-full max-w-md mx-4">
-        <div className="glass-card rounded-2xl p-8 animate-fade-in-up animate-glow-pulse">
+        <div className="glass-card-refined rounded-2xl p-8 animate-smooth-appear animate-glow-pulse">
           {/* Agent icon */}
           <div className="flex justify-center mb-6">
             <div className="relative">
@@ -103,7 +103,7 @@ export function ApiKeySetup({ onConnect }: ApiKeySetupProps) {
                 }}
                 onKeyDown={handleKeyDown}
                 disabled={isLoading}
-                className="pl-10 font-mono bg-[#0d1117] border-[rgba(255,255,255,0.06)] text-white placeholder:text-[#4a4a5a] focus:border-[rgba(129,140,248,0.3)] input-glow h-11 rounded-lg transition-all duration-200"
+                className="pl-10 font-mono input-refined text-white placeholder:text-[#4a4a5a] focus:border-[rgba(129,140,248,0.3)] input-glow h-11 rounded-lg transition-all duration-200"
               />
             </div>
           </div>
@@ -119,7 +119,7 @@ export function ApiKeySetup({ onConnect }: ApiKeySetupProps) {
           <Button
             onClick={handleConnect}
             disabled={isLoading || !apiKey.trim()}
-            className="w-full bg-gradient-agent hover:brightness-115 text-white h-11 rounded-lg font-semibold transition-all duration-200 shadow-lg disabled:opacity-50"
+            className="w-full bg-gradient-premium text-white h-11 rounded-lg font-semibold transition-all duration-200 shadow-lg disabled:opacity-50 interaction-scale"
             size="lg"
           >
             {isLoading ? (

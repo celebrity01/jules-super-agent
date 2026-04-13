@@ -137,7 +137,7 @@ function ActivityCard({
     activity.type === "PLAN_GENERATED";
 
   return (
-    <div className={`animate-fade-in-up ${isAgent ? "" : "flex justify-end"}`}>
+    <div className={`animate-smooth-appear ${isAgent ? "" : "flex justify-end"}`}>
       <div className={`max-w-[85%] ${isAgent ? "" : ""}`}>
         {/* Activity header with avatar */}
         <div className={`flex items-start gap-2.5 ${!isAgent ? "flex-row-reverse" : ""}`}>
@@ -149,8 +149,8 @@ function ActivityCard({
           {/* Content */}
           <div className={`flex-1 min-w-0 ${!isAgent ? "text-right" : ""}`}>
             {/* Name + Time */}
-            <div className={`flex items-center gap-2 mb-1 ${!isAgent ? "flex-row-reverse" : ""}`}>
-              <span className={`text-xs font-semibold ${isAgent ? "text-[#818cf8]" : "text-[#10b981]"}`}>
+            <div className={`flex items-center gap-2 mb-1.5 ${!isAgent ? "flex-row-reverse" : ""}`}>
+              <span className={`text-xs font-semibold tracking-wide ${isAgent ? "text-[#818cf8]" : "text-[#10b981]"}`}>
                 {activity.type === "USER_MESSAGE" ? "You" : "Jules"}
               </span>
               {activity.createTime && (
@@ -180,56 +180,56 @@ function ActivityAvatar({ type }: { type?: string }) {
   switch (type) {
     case "USER_MESSAGE":
       return (
-        <div className="h-7 w-7 rounded-full bg-[rgba(16,185,129,0.1)] flex items-center justify-center border border-[rgba(16,185,129,0.15)]">
-          <User className="h-3.5 w-3.5 text-[#10b981]" />
+        <div className="h-8 w-8 rounded-full bg-[rgba(16,185,129,0.1)] flex items-center justify-center border border-[rgba(16,185,129,0.15)] shadow-sm">
+          <User className="h-4 w-4 text-[#10b981]" />
         </div>
       );
     case "PLAN_GENERATED":
       return (
-        <div className="h-7 w-7 rounded-full bg-[rgba(245,158,11,0.1)] flex items-center justify-center border border-[rgba(245,158,11,0.15)]">
-          <Lightbulb className="h-3.5 w-3.5 text-[#f59e0b]" />
+        <div className="h-8 w-8 rounded-full bg-[rgba(245,158,11,0.1)] flex items-center justify-center border border-[rgba(245,158,11,0.15)] shadow-sm">
+          <Lightbulb className="h-4 w-4 text-[#f59e0b]" />
         </div>
       );
     case "PLAN_APPROVED":
       return (
-        <div className="h-7 w-7 rounded-full bg-[rgba(16,185,129,0.1)] flex items-center justify-center border border-[rgba(16,185,129,0.15)]">
-          <CheckCircle2 className="h-3.5 w-3.5 text-[#10b981]" />
+        <div className="h-8 w-8 rounded-full bg-[rgba(16,185,129,0.1)] flex items-center justify-center border border-[rgba(16,185,129,0.15)] shadow-sm">
+          <CheckCircle2 className="h-4 w-4 text-[#10b981]" />
         </div>
       );
     case "BASH_OUTPUT":
       return (
-        <div className="h-7 w-7 rounded-full bg-[rgba(168,85,247,0.1)] flex items-center justify-center border border-[rgba(168,85,247,0.15)]">
-          <Terminal className="h-3.5 w-3.5 text-[#a855f7]" />
+        <div className="h-8 w-8 rounded-full bg-[rgba(168,85,247,0.1)] flex items-center justify-center border border-[rgba(168,85,247,0.15)] shadow-sm">
+          <Terminal className="h-4 w-4 text-[#a855f7]" />
         </div>
       );
     case "CODE_CHANGE":
       return (
-        <div className="h-7 w-7 rounded-full bg-[rgba(6,182,212,0.1)] flex items-center justify-center border border-[rgba(6,182,212,0.15)]">
-          <FileCode2 className="h-3.5 w-3.5 text-[#06b6d4]" />
+        <div className="h-8 w-8 rounded-full bg-[rgba(6,182,212,0.1)] flex items-center justify-center border border-[rgba(6,182,212,0.15)] shadow-sm">
+          <FileCode2 className="h-4 w-4 text-[#06b6d4]" />
         </div>
       );
     case "SESSION_COMPLETED":
       return (
-        <div className="h-7 w-7 rounded-full bg-[rgba(16,185,129,0.1)] flex items-center justify-center border border-[rgba(16,185,129,0.15)]">
-          <Sparkles className="h-3.5 w-3.5 text-[#10b981]" />
+        <div className="h-8 w-8 rounded-full bg-[rgba(16,185,129,0.1)] flex items-center justify-center border border-[rgba(16,185,129,0.15)] shadow-sm">
+          <Sparkles className="h-4 w-4 text-[#10b981]" />
         </div>
       );
     case "PR_CREATED":
       return (
-        <div className="h-7 w-7 rounded-full bg-[rgba(129,140,248,0.1)] flex items-center justify-center border border-[rgba(129,140,248,0.15)]">
-          <GitPullRequest className="h-3.5 w-3.5 text-[#818cf8]" />
+        <div className="h-8 w-8 rounded-full bg-[rgba(129,140,248,0.1)] flex items-center justify-center border border-[rgba(129,140,248,0.15)] shadow-sm">
+          <GitPullRequest className="h-4 w-4 text-[#818cf8]" />
         </div>
       );
     case "ERROR":
       return (
-        <div className="h-7 w-7 rounded-full bg-[rgba(239,68,68,0.1)] flex items-center justify-center border border-[rgba(239,68,68,0.15)]">
-          <AlertCircle className="h-3.5 w-3.5 text-[#ef4444]" />
+        <div className="h-8 w-8 rounded-full bg-[rgba(239,68,68,0.1)] flex items-center justify-center border border-[rgba(239,68,68,0.15)] shadow-sm">
+          <AlertCircle className="h-4 w-4 text-[#ef4444]" />
         </div>
       );
     default:
       return (
-        <div className="h-7 w-7 rounded-full bg-[rgba(129,140,248,0.1)] flex items-center justify-center border border-[rgba(129,140,248,0.15)]">
-          <Bot className="h-3.5 w-3.5 text-[#818cf8]" />
+        <div className="h-8 w-8 rounded-full bg-[rgba(129,140,248,0.1)] flex items-center justify-center border border-[rgba(129,140,248,0.15)] shadow-sm">
+          <Bot className="h-4 w-4 text-[#818cf8]" />
         </div>
       );
   }
@@ -276,13 +276,13 @@ function ActivityContent({
       );
     case "USER_MESSAGE":
       return (
-        <div className="inline-block rounded-xl rounded-tr-sm bg-[rgba(16,185,129,0.06)] border border-[rgba(16,185,129,0.1)] px-3.5 py-2">
+        <div className="inline-block bubble-user px-3.5 py-2">
           <p className="text-sm text-[#e2e8f0] leading-relaxed">{activity.description}</p>
         </div>
       );
     default:
       return (
-        <div className="rounded-lg bg-[rgba(129,140,248,0.04)] border border-[rgba(129,140,248,0.06)] px-3.5 py-2">
+        <div className="bubble-agent px-3.5 py-2">
           {activity.description && (
             <p className="text-sm text-[#94a3b8] leading-relaxed">{activity.description}</p>
           )}
@@ -310,7 +310,7 @@ function PlanCard({
   return (
     <Collapsible open={isExpanded} onOpenChange={onToggleExpand}>
       <div
-        className="rounded-xl bg-[rgba(245,158,11,0.04)] border border-[rgba(245,158,11,0.08)] overflow-hidden cursor-pointer hover:bg-[rgba(245,158,11,0.06)] transition-colors duration-200"
+        className="rounded-xl bg-[rgba(245,158,11,0.04)] border border-[rgba(245,158,11,0.08)] border-l-[3px] border-l-[rgba(245,158,11,0.3)] overflow-hidden cursor-pointer hover:bg-[rgba(245,158,11,0.06)] transition-all duration-200"
         onClick={onToggleExpand}
       >
         <div className="flex items-center justify-between px-3.5 py-2.5">
@@ -359,7 +359,7 @@ function TerminalCard({
       <div className="terminal-card">
         {/* Terminal header */}
         <div
-          className="terminal-header cursor-pointer"
+          className="terminal-header cursor-pointer glass-card-refined"
           onClick={onToggleExpand}
         >
           <div className="terminal-dot" style={{ background: "#ff5f57" }} />
@@ -373,12 +373,12 @@ function TerminalCard({
           <div className="terminal-body dark-scrollbar max-h-64 overflow-y-auto">
             {activity.description && (
               <div className="mb-2">
-                <span className="text-[#10b981]">$</span>{" "}
+                <span className="text-[#10b981] font-semibold">$</span>{" "}
                 <span className="text-[#94a3b8]">{activity.description}</span>
               </div>
             )}
             {activity.bashOutput && (
-              <pre className="text-[#c9d1d9] whitespace-pre-wrap break-all leading-relaxed">{activity.bashOutput}</pre>
+              <pre className="text-[#c9d1d9] whitespace-pre-wrap break-all leading-relaxed text-[11px]">{activity.bashOutput}</pre>
             )}
           </div>
         </CollapsibleContent>
@@ -458,7 +458,7 @@ function DiffCard({
 /* Completion Card */
 function CompletionCard({ activity }: { activity: JulesActivity }) {
   return (
-    <div className="rounded-xl bg-[rgba(16,185,129,0.04)] border border-[rgba(16,185,129,0.08)] px-4 py-3 glow-success">
+    <div className="rounded-xl bg-[rgba(16,185,129,0.04)] border border-[rgba(16,185,129,0.08)] border-l-[3px] border-l-[#10b981] px-4 py-3 glow-success animate-smooth-appear" style={{ animation: "smooth-appear 0.5s cubic-bezier(0.16, 1, 0.3, 1), subtle-pulse 2s ease-in-out 1" }}>
       <div className="flex items-center gap-3">
         <div className="h-10 w-10 rounded-full bg-[rgba(16,185,129,0.1)] flex items-center justify-center">
           <Sparkles className="h-5 w-5 text-[#10b981]" />
