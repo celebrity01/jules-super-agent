@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -19,7 +19,11 @@ export function SupabaseSetup({ onConfigured, onSkip }: SupabaseSetupProps) {
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState<"form" | "success">("form");
 
-  const existingConfig = getSupabaseConfig();
+  const [existingConfig, setExistingConfig] = useState<ReturnType<typeof getSupabaseConfig> | null>(null);
+
+  useEffect(() => {
+    setExistingConfig(getSupabaseConfig());
+  }, []);
 
   const handleConnect = async () => {
     if (!url.trim() || !anonKey.trim()) { setError("Both fields required"); return; }

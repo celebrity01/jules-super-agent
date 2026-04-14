@@ -364,7 +364,7 @@ function ActivityMessage({
           </>
         )}
         {/* Default fallback */}
-        {!["PLAN_GENERATED", "BASH_OUTPUT", "CODE_CHANGE", "SESSION_COMPLETED", "PR_CREATED", "ERROR", "PLAN_APPROVED", "USER_MESSAGE"].includes(activity.type) && (
+        {activity.type && !["PLAN_GENERATED", "BASH_OUTPUT", "CODE_CHANGE", "SESSION_COMPLETED", "PR_CREATED", "ERROR", "PLAN_APPROVED", "USER_MESSAGE"].includes(activity.type) && (
           <>
             {activity.description && <p>{activity.description}</p>}
             {activity.progress && (

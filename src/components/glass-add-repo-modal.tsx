@@ -71,6 +71,7 @@ export function GlassAddRepoModal({
 
   const handleConnect = async () => {
     if (!connectUrl.trim()) { setError("Repository URL is required"); return; }
+    if (!githubToken) { setError("GitHub token required — connect GitHub in Agents tab first"); return; }
 
     // Validate it's a GitHub URL
     const githubPattern = /^https?:\/\/github\.com\/([^\/]+)\/([^\/]+)/i;
@@ -81,13 +82,15 @@ export function GlassAddRepoModal({
     setError(null);
 
     try {
-      // Connect the repo as a Jules source via the GitHub repos API
-      const res = await fetch("/api/github/repos", {
-        headers: { "Content-Type": "application/json", "x-github-token": githubToken },
+      // Verify the repo exists via GitHub API
+      const owner = match[1];
+      const repo = match[2].replace(/\.git$/, '');
+      const verifyRes = await fetch(`/api/github/repos/${owner}/${repo}`, {
+        headers: { "X-GitHub-Token": githubToken },
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to verify repository");
+      if (!verifyRes.ok) {
+        const data = await verifyRes.json().catch(() => ({}));
+        throw new Error(data.error || "Repository not found or inaccessible");
       }
       onRepoCreated();
       handleClose();
@@ -239,7 +242,7 @@ export function GlassAddRepoModal({
           </button>
           <button
             onClick={tab === "create" ? handleCreate : handleConnect}
-            disabled={isLoading || (tab === "create" && !repoName.trim()) || (tab === "connect" && !connectUrl.trim())}
+            disabled={isLoading || (tab === "create" && (!repoName.trim() || !githubToken)) || (tab === "connect" && (!connectUrl.trim() || !githubToken))}
             className={`flex-[2] flex items-center justify-center gap-3 py-4 rounded-2xl font-bold text-sm active:scale-95 transition-all disabled:opacity-50 ${
               tab === "create"
                 ? "bg-[#00E676] text-[#071115] shadow-[0_10px_30px_rgba(0,230,118,0.3)]"

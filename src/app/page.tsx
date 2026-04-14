@@ -51,6 +51,7 @@ export default function Home() {
   const [renderApiKey, setRenderApiKey] = useState<string | null>(null);
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasSupabaseConfig, setHasSupabaseConfig] = useState(false);
 
   // Dashboard state
   const [sources, setSources] = useState<JulesSource[]>([]);
@@ -69,6 +70,7 @@ export default function Home() {
       if (existingPAT) setSupabasePAT(existingPAT);
 
       const supabaseConfig = getSupabaseConfig();
+      setHasSupabaseConfig(!!supabaseConfig);
       if (supabaseConfig) {
         try {
           const user = await getCurrentUser();
@@ -287,7 +289,7 @@ export default function Home() {
     return (
       <>
         <ApiKeySetup onConnect={handleConnect} />
-        {getSupabaseConfig() && (
+        {hasSupabaseConfig && (
           <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} onAuthSuccess={handleAuthSuccess} />
         )}
       </>
@@ -409,7 +411,7 @@ export default function Home() {
       )}
 
       {/* Auth Dialog */}
-      {getSupabaseConfig() && (
+      {hasSupabaseConfig && (
         <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} onAuthSuccess={handleAuthSuccess} />
       )}
 

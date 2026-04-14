@@ -67,7 +67,11 @@ export function GlassAgentsView({
   const [patError, setPatError] = useState<string | null>(null);
   const [renderError, setRenderError] = useState<string | null>(null);
 
-  const supabaseConfig = typeof window !== "undefined" ? getSupabaseConfig() : null;
+  const [supabaseConfig, setSupabaseConfig] = useState<ReturnType<typeof getSupabaseConfig> | null>(null);
+
+  useEffect(() => {
+    setSupabaseConfig(getSupabaseConfig());
+  }, []);
 
   useEffect(() => {
     if (!githubToken) return;

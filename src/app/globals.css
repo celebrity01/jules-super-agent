@@ -7,12 +7,35 @@
   --color-background: #03080a;
   --color-foreground: #E0F7FA;
   --color-primary: #00E5FF;
+  --color-primary-foreground: #071115;
+  --color-secondary: rgba(255, 255, 255, 0.08);
+  --color-secondary-foreground: #E0F7FA;
+  --color-card: rgba(10, 20, 25, 0.85);
+  --color-card-foreground: #E0F7FA;
+  --color-popover: rgba(10, 20, 25, 0.95);
+  --color-popover-foreground: #E0F7FA;
+  --color-accent: rgba(0, 229, 255, 0.1);
+  --color-accent-foreground: #00E5FF;
+  --color-destructive: #FF2A5F;
+  --color-destructive-foreground: #E0F7FA;
+  --color-muted: #547B88;
+  --color-muted-foreground: #8BAAB5;
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-input: rgba(255, 255, 255, 0.1);
+  --color-ring: #00E5FF;
   --color-glass: rgba(15, 33, 40, 0.45);
   --color-glass-heavy: rgba(10, 20, 25, 0.85);
-  --color-muted: #547B88;
   --color-accent-green: #00E676;
   --color-accent-red: #FF2A5F;
   --color-accent-purple: #B388FF;
+  --color-chart-1: #00E5FF;
+  --color-chart-2: #00E676;
+  --color-chart-3: #FF2A5F;
+  --color-chart-4: #B388FF;
+  --color-chart-5: #547B88;
+  --radius-lg: 0.75rem;
+  --radius-md: 0.625rem;
+  --radius-sm: 0.5rem;
 }
 
 /* ===== Base ===== */

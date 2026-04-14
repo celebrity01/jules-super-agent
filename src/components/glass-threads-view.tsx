@@ -122,7 +122,7 @@ export function GlassThreadsView({
             <Library size={22} />
           </div>
           <span className="text-[10px] font-mono text-[#547B88] uppercase tracking-tighter text-center leading-tight">
-            Sources
+            {isLoadingSources ? "..." : sources.length} Sources
           </span>
         </button>
       </div>
