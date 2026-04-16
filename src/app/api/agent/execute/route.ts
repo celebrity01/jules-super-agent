@@ -70,10 +70,13 @@ async function executeCommand(
           }
         );
         if (!deployRes.ok) {
-          const err = await deployRes.json().catch(() => ({}));
-          throw new Error((err as Record<string, string>).message || `Deploy failed (${deployRes.status})`);
+          const errText = await deployRes.text();
+          let errData;
+          try { errData = JSON.parse(errText); } catch { errData = {}; }
+          throw new Error((errData as Record<string, string>).message || `Deploy failed (${deployRes.status})`);
         }
-        return deployRes.json();
+        const deployText = await deployRes.text();
+        try { return JSON.parse(deployText); } catch { return { success: true }; }
       }
 
       case "getServiceStatus": {
@@ -85,7 +88,9 @@ async function executeCommand(
         if (!svcRes.ok) {
           throw new Error(`Failed to get service (${svcRes.status})`);
         }
-        const svc = await svcRes.json();
+        const svcText = await svcRes.text();
+        let svc;
+        try { svc = JSON.parse(svcText); } catch { throw new Error("Invalid JSON from Render API"); }
         return {
           id: svc.id,
           name: svc.name,
