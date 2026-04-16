@@ -5,7 +5,7 @@ const JULES_BASE = "https://jules.googleapis.com/v1alpha";
 export async function GET(req: NextRequest) {
   const apiKey = req.headers.get("X-Jules-Api-Key");
   if (!apiKey) {
-    return NextResponse.json({ error: "API key is required" }, { status: 401 });
+    return NextResponse.json({ error: "OAuth token is required" }, { status: 401 });
   }
 
   try {
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
 
     const res = await fetch(url, {
       headers: {
-        "X-Goog-Api-Key": apiKey,
+        "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
     });
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const apiKey = req.headers.get("X-Jules-Api-Key");
   if (!apiKey) {
-    return NextResponse.json({ error: "API key is required" }, { status: 401 });
+    return NextResponse.json({ error: "OAuth token is required" }, { status: 401 });
   }
 
   try {
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     const res = await fetch(`${JULES_BASE}/sessions`, {
       method: "POST",
       headers: {
-        "X-Goog-Api-Key": apiKey,
+        "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),

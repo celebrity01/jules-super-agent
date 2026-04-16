@@ -339,7 +339,7 @@ export async function sendMessage(
   const res = await fetch(`/api/jules/sessions/${id}/message`, {
     method: "POST",
     headers: headers(apiKey),
-    body: JSON.stringify({ prompt }),
+    body: JSON.stringify({ userMessage: prompt }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "Request failed" }));
@@ -358,7 +358,7 @@ export interface GitHubUser {
   name?: string;
 }
 
-export interface GitHubRepo {
+export interface GitHubRepoInfo {
   id: number;
   name: string;
   full_name: string;
@@ -383,7 +383,7 @@ export async function getGitHubUser(token: string): Promise<GitHubUser> {
   return res.json();
 }
 
-export async function getGitHubRepos(token: string): Promise<GitHubRepo[]> {
+export async function getGitHubRepos(token: string): Promise<GitHubRepoInfo[]> {
   const res = await fetch("/api/github/repos", {
     headers: githubHeaders(token),
   });
@@ -404,7 +404,7 @@ export async function createGitHubRepo(
     private?: boolean;
     auto_init?: boolean;
   }
-): Promise<GitHubRepo> {
+): Promise<GitHubRepoInfo> {
   const res = await fetch("/api/github/create-repo", {
     method: "POST",
     headers: githubHeaders(token),

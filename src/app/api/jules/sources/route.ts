@@ -5,13 +5,13 @@ const JULES_BASE = "https://jules.googleapis.com/v1alpha";
 export async function GET(req: NextRequest) {
   const apiKey = req.headers.get("X-Jules-Api-Key");
   if (!apiKey) {
-    return NextResponse.json({ error: "API key is required" }, { status: 401 });
+    return NextResponse.json({ error: "OAuth token is required" }, { status: 401 });
   }
 
   try {
     const res = await fetch(`${JULES_BASE}/sources`, {
       headers: {
-        "X-Goog-Api-Key": apiKey,
+        "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
     });
