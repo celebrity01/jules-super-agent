@@ -35,7 +35,15 @@ export async function POST(req: NextRequest) {
       }
     );
 
-    const data = await res.json();
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch {
+      return NextResponse.json(
+        { error: `Non-JSON response from Netlify (${res.status}): ${text.slice(0, 200)}` },
+        { status: res.status || 502 }
+      );
+    }
+
     if (!res.ok) {
       console.error("Netlify deploy error:", data);
       return NextResponse.json(

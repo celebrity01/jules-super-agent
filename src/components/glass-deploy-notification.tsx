@@ -191,21 +191,27 @@ export function GlassDeployNotification({
     }
   }, [open, onClose]);
 
-  // Fetch GitHub repos
-  const fetchGithubRepos = useCallback(async () => {
+  // Fetch GitHub repos (with optional server-side search)
+  const fetchGithubRepos = useCallback(async (searchQuery?: string) => {
     if (!githubToken) return;
     setIsLoadingRepos(true);
     setReposError(null);
 
     try {
-      const res = await fetch("/api/github/repos", {
+      const url = searchQuery
+        ? `/api/github/repos?search=${encodeURIComponent(searchQuery)}`
+        : "/api/github/repos";
+      const res = await fetch(url, {
         headers: { "X-GitHub-Token": githubToken },
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Failed" }));
-        throw new Error(err.error || "Failed to fetch GitHub repos");
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch {
+        throw new Error(`Invalid JSON from GitHub repos API (${res.status})`);
       }
-      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || data.message || `Failed to fetch GitHub repos (${res.status})`);
+      }
       const repos: GitHubRepoItem[] = (Array.isArray(data) ? data : []).map((r: Record<string, unknown>) => ({
         id: r.id as number,
         full_name: r.full_name as string,
@@ -231,47 +237,55 @@ export function GlassDeployNotification({
     setItems([]);
     setSelectedItem(null);
 
+    // Helper: safely parse JSON from a fetch Response (body can only be read once)
+    const safeParse = async (res: Response) => {
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = null; }
+      return { ok: res.ok, status: res.status, data, text };
+    };
+
     try {
       let fetchedItems: DeployItem[] = [];
       const headerName = PROVIDERS[provider].tokenHeader;
 
       if (provider === "vercel") {
-        const res = await fetch("/api/vercel/projects", {
+        const { ok, status, data, text: rawText } = await safeParse(await fetch("/api/vercel/projects", {
           headers: { [headerName]: token },
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({ error: "Failed" }));
+        }));
+        if (!ok) {
+          const err = data || { error: `Failed (${status})` };
           throw new Error(err.error || "Failed to fetch Vercel projects");
         }
-        const data = await res.json();
+        if (!data) throw new Error(`Invalid JSON from Vercel API: ${rawText.slice(0, 100)}`);
         fetchedItems = (Array.isArray(data) ? data : []).map((p: Record<string, unknown>) => ({
           id: p.id as string,
           name: p.name as string,
           url: `https://${p.name}.vercel.app`,
         }));
       } else if (provider === "netlify") {
-        const res = await fetch("/api/netlify/sites", {
+        const { ok, status, data, text: rawText } = await safeParse(await fetch("/api/netlify/sites", {
           headers: { [headerName]: token },
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({ error: "Failed" }));
+        }));
+        if (!ok) {
+          const err = data || { error: `Failed (${status})` };
           throw new Error(err.error || "Failed to fetch Netlify sites");
         }
-        const data = await res.json();
+        if (!data) throw new Error(`Invalid JSON from Netlify API: ${rawText.slice(0, 100)}`);
         fetchedItems = (Array.isArray(data) ? data : []).map((s: Record<string, unknown>) => ({
           id: s.id as string,
           name: s.name as string,
           url: (s.ssl_url || s.url) as string,
         }));
       } else if (provider === "render") {
-        const res = await fetch("/api/render/services", {
+        const { ok, status, data, text: rawText } = await safeParse(await fetch("/api/render/services", {
           headers: { [headerName]: token },
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({ error: "Failed" }));
+        }));
+        if (!ok) {
+          const err = data || { error: `Failed (${status})` };
           throw new Error(err.error || "Failed to fetch Render services");
         }
-        const data = await res.json();
+        if (!data) throw new Error(`Invalid JSON from Render API: ${rawText.slice(0, 100)}`);
         fetchedItems = (Array.isArray(data) ? data : []).map((s: Record<string, unknown>) => ({
           id: (s.service?.id || s.id) as string,
           name: (s.service?.name || s.name || "Untitled") as string,
@@ -347,7 +361,7 @@ export function GlassDeployNotification({
       let res: Response;
 
       if (selectedItemType === "github" && selectedGithubRepo) {
-        // Deploy from GitHub repo
+        // Deploy from GitHub repo — create a new project/site/service linked to the repo
         const repo = selectedGithubRepo;
 
         if (selectedProvider === "vercel") {
@@ -363,22 +377,29 @@ export function GlassDeployNotification({
             }),
           });
         } else if (selectedProvider === "netlify") {
-          // Deploy to Netlify - trigger a deploy with the repo
-          res = await fetch("/api/netlify/deploy", {
+          // Create a Netlify site linked to the GitHub repo
+          res = await fetch("/api/netlify/sites/create", {
             method: "POST",
             headers: { "Content-Type": "application/json", [headerName]: savedToken },
             body: JSON.stringify({
-              siteId: repo.name,
-              title: repo.name,
+              name: repo.name,
+              repoOwner: repo.owner,
+              repoName: repo.name,
               branch: repo.default_branch || "main",
+              repoUrl: repo.html_url,
             }),
           });
         } else {
-          // Render - trigger deploy with service ID
-          res = await fetch("/api/render/deploy", {
+          // Create a Render web service linked to the GitHub repo
+          res = await fetch("/api/render/services/create", {
             method: "POST",
             headers: { "Content-Type": "application/json", [headerName]: savedToken },
-            body: JSON.stringify({ serviceId: repo.name, clearCache: false }),
+            body: JSON.stringify({
+              name: repo.name,
+              repoOwner: repo.owner,
+              repoName: repo.name,
+              branch: repo.default_branch || "main",
+            }),
           });
         }
       } else {
@@ -407,11 +428,15 @@ export function GlassDeployNotification({
       }
 
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Deploy failed" }));
-        throw new Error(err.error || `Deploy failed (${res.status})`);
+        const responseText = await res.text();
+        let errData;
+        try { errData = JSON.parse(responseText); } catch { errData = { error: `Deploy failed (${res.status}): ${responseText.slice(0, 100)}` }; }
+        throw new Error(errData.error || errData.message || `Deploy failed (${res.status})`);
       }
 
-      const data = await res.json().catch(() => ({}));
+      const responseText = await res.text();
+      let data;
+      try { data = JSON.parse(responseText); } catch { data = {}; }
       const displayName = selectedItemType === "github"
         ? selectedGithubRepo?.full_name || selectedItem
         : items.find((i) => i.id === selectedItem)?.name || selectedItem;
@@ -703,11 +728,25 @@ export function GlassDeployNotification({
                     <Search size={14} className="text-[#547B88] mr-2 shrink-0" />
                     <input
                       type="text"
-                      placeholder="Search GitHub repos..."
+                      placeholder="Search repos... (press Enter to search all)"
                       value={repoSearch}
                       onChange={(e) => setRepoSearch(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && githubToken) {
+                          fetchGithubRepos(repoSearch);
+                        }
+                      }}
                       className="bg-transparent border-none outline-none w-full text-sm text-[#E0F7FA] placeholder-[#1A3540] font-mono"
                     />
+                    {githubToken && (
+                      <button
+                        onClick={() => fetchGithubRepos(repoSearch)}
+                        className="ml-2 p-1 text-[#547B88] hover:text-[#E0F7FA] transition-colors shrink-0"
+                        title="Refresh repos"
+                      >
+                        <Loader2 size={14} className={isLoadingRepos ? "animate-spin" : ""} />
+                      </button>
+                    )}
                   </div>
 
                   {!githubToken ? (
@@ -719,14 +758,15 @@ export function GlassDeployNotification({
                   ) : isLoadingRepos ? (
                     <div className="text-center py-8">
                       <Loader2 size={24} className="text-[#E0F7FA] mx-auto mb-2 animate-spin" />
-                      <p className="text-xs text-[#547B88]">Loading GitHub repos...</p>
+                      <p className="text-xs text-[#547B88]">Loading all GitHub repos...</p>
+                      <p className="text-[10px] text-[#547B88] mt-1 opacity-60">Fetching all your repositories</p>
                     </div>
                   ) : reposError ? (
                     <div className="text-center py-6">
                       <AlertCircle size={24} className="text-[#FF2A5F] mx-auto mb-2" />
                       <p className="text-xs text-[#FF2A5F]">{reposError}</p>
                       <button
-                        onClick={fetchGithubRepos}
+                        onClick={() => fetchGithubRepos(repoSearch)}
                         className="mt-2 text-xs text-[#00E5FF] font-bold hover:underline"
                       >
                         Retry
@@ -737,6 +777,14 @@ export function GlassDeployNotification({
                       <p className="text-xs text-[#547B88]">
                         {repoSearch ? `No repos matching "${repoSearch}"` : "No GitHub repos found"}
                       </p>
+                      {repoSearch && (
+                        <button
+                          onClick={() => fetchGithubRepos(repoSearch)}
+                          className="mt-2 text-xs text-[#00E5FF] font-bold hover:underline"
+                        >
+                          Search GitHub directly
+                        </button>
+                      )}
                     </div>
                   ) : (
                     <div className="space-y-2 max-h-[30vh] overflow-y-auto">

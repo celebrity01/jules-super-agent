@@ -18,7 +18,9 @@ export async function POST(req: NextRequest) {
     // If a deploy hook URL is provided, use it directly
     if (deployHookUrl) {
       const res = await fetch(deployHookUrl, { method: "POST" });
-      const data = await res.json().catch(() => ({ success: true }));
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = { success: true }; }
       if (!res.ok) {
         return NextResponse.json(
           { error: data.error?.message || `Deploy hook failed (${res.status})` },
@@ -45,7 +47,15 @@ export async function POST(req: NextRequest) {
       }),
     });
 
-    const data = await res.json();
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch {
+      return NextResponse.json(
+        { error: `Non-JSON response from Vercel (${res.status}): ${text.slice(0, 200)}` },
+        { status: res.status || 502 }
+      );
+    }
+
     if (!res.ok) {
       return NextResponse.json(
         { error: data.error?.message || `Failed to trigger deploy (${res.status})` },
