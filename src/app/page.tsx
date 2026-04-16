@@ -9,7 +9,6 @@ import { GlassMCPView } from "@/components/glass-mcp-view";
 import { GlassPingsView } from "@/components/glass-pings-view";
 import { GlassNewMissionModal } from "@/components/glass-new-mission-modal";
 import { GlassAddRepoModal } from "@/components/glass-add-repo-modal";
-import { GlassDeployModal } from "@/components/glass-deploy-modal";
 import { JulesSource, JulesSession, listSources, listSessions } from "@/lib/jules-client";
 import {
   MessageSquare,
@@ -40,7 +39,6 @@ export default function Home() {
   const [view, setView] = useState<ViewType>("threads");
   const [isNewMissionOpen, setIsNewMissionOpen] = useState(false);
   const [isAddRepoOpen, setIsAddRepoOpen] = useState(false);
-  const [isDeployOpen, setIsDeployOpen] = useState(false);
 
   // Init — load from localStorage
   useEffect(() => {
@@ -172,7 +170,6 @@ export default function Home() {
             apiKey={apiKey}
             onBack={() => { setView("threads"); setSelectedSessionId(null); }}
             onAddRepo={() => setIsAddRepoOpen(true)}
-            onDeploy={() => setIsDeployOpen(true)}
             githubToken={githubToken || undefined}
           />
         )}
@@ -247,13 +244,6 @@ export default function Home() {
           onClose={() => setIsAddRepoOpen(false)}
           githubToken={githubToken || ""}
           onRepoCreated={() => { fetchSources(); setIsAddRepoOpen(false); }}
-        />
-      )}
-      {isDeployOpen && (
-        <GlassDeployModal
-          open={isDeployOpen}
-          onClose={() => setIsDeployOpen(false)}
-          githubToken={githubToken || undefined}
         />
       )}
     </div>

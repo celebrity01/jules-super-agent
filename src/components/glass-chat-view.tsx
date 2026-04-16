@@ -34,6 +34,7 @@ import {
   ShieldCheck,
   Rocket,
 } from "lucide-react";
+import { GlassDeployNotification, HostProvider } from "@/components/glass-deploy-notification";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
@@ -42,7 +43,7 @@ interface GlassChatViewProps {
   apiKey: string;
   onBack: () => void;
   onAddRepo: () => void;
-  onDeploy: () => void;
+  onDeploy?: () => void;
   githubToken?: string;
 }
 
@@ -85,6 +86,8 @@ export function GlassChatView({ sessionId, apiKey, onBack, onAddRepo, onDeploy, 
   const [sendError, setSendError] = useState<string | null>(null);
   const [copyId, setCopyId] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [deployOpen, setDeployOpen] = useState(false);
+  const [selectedDeployProvider, setSelectedDeployProvider] = useState<HostProvider | undefined>(undefined);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -297,13 +300,13 @@ export function GlassChatView({ sessionId, apiKey, onBack, onAddRepo, onDeploy, 
                   <p className="text-[9px] font-mono text-[#547B88] uppercase tracking-[0.15em] font-bold px-3 py-1">Deploy to</p>
                 </div>
                 {[
-                  { id: "vercel", name: "Vercel", color: "#E0F7FA" },
-                  { id: "render", name: "Render", color: "#46E3B7" },
-                  { id: "netlify", name: "Netlify", color: "#30C8C9" },
+                  { id: "vercel" as HostProvider, name: "Vercel", color: "#E0F7FA" },
+                  { id: "render" as HostProvider, name: "Render", color: "#46E3B7" },
+                  { id: "netlify" as HostProvider, name: "Netlify", color: "#30C8C9" },
                 ].map((host) => (
                   <button
                     key={host.id}
-                    onClick={() => { setMenuOpen(false); onDeploy(); }}
+                    onClick={() => { setMenuOpen(false); setSelectedDeployProvider(host.id); setDeployOpen(true); }}
                     className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/5 transition-all text-[#E0F7FA]"
                   >
                     <div className="w-8 h-8 flex items-center justify-center rounded-lg shrink-0" style={{ backgroundColor: `${host.color}15`, color: host.color }}>
@@ -405,6 +408,17 @@ export function GlassChatView({ sessionId, apiKey, onBack, onAddRepo, onDeploy, 
           </button>
         </div>
       </div>
+
+      {/* Deploy Notification Modal */}
+      <GlassDeployNotification
+        open={deployOpen}
+        onClose={() => { setDeployOpen(false); setSelectedDeployProvider(undefined); }}
+        preselectedProvider={selectedDeployProvider}
+        onSendMessage={(msg) => {
+          // Send deploy-related messages as a Jules session message
+          sendMessage(apiKey, sessionId, msg).catch(() => {});
+        }}
+      />
     </div>
   );
 }

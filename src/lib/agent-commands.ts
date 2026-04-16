@@ -1,9 +1,9 @@
-// Cross-service command layer: Jules ↔ Supabase ↔ Render
-// Enables the agent to query and control all three services
+// Cross-service command layer: Jules ↔ Render
+// Enables the agent to query and control services
 
 // ===== Command Types =====
 
-export type ServiceType = "jules" | "supabase" | "render";
+export type ServiceType = "jules" | "render";
 
 export interface AgentCommand {
   id: string;
@@ -31,16 +31,6 @@ export interface ServiceMeshContext {
     sessionsCount?: number;
     sourcesCount?: number;
   };
-  supabase: {
-    connected: boolean;
-    projectCount?: number;
-    projects?: Array<{
-      ref: string;
-      name: string;
-      status: string;
-      region: string;
-    }>;
-  };
   render: {
     connected: boolean;
     servicesCount?: number;
@@ -65,7 +55,6 @@ export interface ServiceMeshContext {
 
 export function buildServiceMeshContext(params: {
   apiKey: string | null;
-  supabasePAT: string | null;
   renderApiKey: string | null;
   sessionsCount?: number;
   sourcesCount?: number;
@@ -76,9 +65,6 @@ export function buildServiceMeshContext(params: {
       sessionsCount: params.sessionsCount,
       sourcesCount: params.sourcesCount,
     },
-    supabase: {
-      connected: !!params.supabasePAT,
-    },
     render: {
       connected: !!params.renderApiKey,
     },
@@ -88,28 +74,6 @@ export function buildServiceMeshContext(params: {
 // ===== Pre-built cross-service command templates =====
 
 export const CROSS_SERVICE_COMMANDS = {
-  // Supabase → Render: Set Supabase project keys as Render service env vars
-  syncSupabaseKeysToRender: (supabaseProjectRef: string, renderServiceId: string): AgentCommand => ({
-    id: `sync-keys-${Date.now()}`,
-    type: "sync-env-vars",
-    source: "supabase",
-    target: "render",
-    action: "setEnvVars",
-    params: { supabaseProjectRef, renderServiceId },
-    description: `Sync Supabase (${supabaseProjectRef}) API keys to Render service (${renderServiceId}) env vars`,
-  }),
-
-  // Render → Supabase: Link Render Postgres connection string to Supabase project
-  linkRenderPostgresToSupabase: (renderPostgresId: string, supabaseProjectRef: string): AgentCommand => ({
-    id: `link-pg-${Date.now()}`,
-    type: "link-database",
-    source: "render",
-    target: "supabase",
-    action: "linkDatabase",
-    params: { renderPostgresId, supabaseProjectRef },
-    description: `Link Render Postgres (${renderPostgresId}) to Supabase project (${supabaseProjectRef})`,
-  }),
-
   // Jules → Render: Deploy a Render service after code changes
   deployToRender: (renderServiceId: string, commitId?: string): AgentCommand => ({
     id: `deploy-${Date.now()}`,
@@ -119,17 +83,6 @@ export const CROSS_SERVICE_COMMANDS = {
     action: "triggerDeploy",
     params: { renderServiceId, commitId },
     description: `Trigger deploy on Render service (${renderServiceId})${commitId ? ` for commit ${commitId}` : ""}`,
-  }),
-
-  // Jules → Supabase: Check Supabase project health
-  checkSupabaseHealth: (supabaseProjectRef: string): AgentCommand => ({
-    id: `health-${Date.now()}`,
-    type: "check-health",
-    source: "jules",
-    target: "supabase",
-    action: "getHealth",
-    params: { supabaseProjectRef },
-    description: `Check health of Supabase project (${supabaseProjectRef})`,
   }),
 
   // Jules → Render: Check Render service status
@@ -153,39 +106,6 @@ export const CROSS_SERVICE_COMMANDS = {
     params: { renderServiceId },
     description: `Restart Render service (${renderServiceId})`,
   }),
-
-  // Jules → Supabase: Pause a Supabase project
-  pauseSupabaseProject: (supabaseProjectRef: string): AgentCommand => ({
-    id: `pause-${Date.now()}`,
-    type: "pause-project",
-    source: "jules",
-    target: "supabase",
-    action: "pauseProject",
-    params: { supabaseProjectRef },
-    description: `Pause Supabase project (${supabaseProjectRef})`,
-  }),
-
-  // Jules → Supabase: Restore a Supabase project
-  restoreSupabaseProject: (supabaseProjectRef: string): AgentCommand => ({
-    id: `restore-${Date.now()}`,
-    type: "restore-project",
-    source: "jules",
-    target: "supabase",
-    action: "restoreProject",
-    params: { supabaseProjectRef },
-    description: `Restore Supabase project (${supabaseProjectRef})`,
-  }),
-
-  // Render → Supabase: Sync Render service URL to Supabase
-  syncRenderUrlToSupabase: (renderServiceId: string, supabaseProjectRef: string): AgentCommand => ({
-    id: `sync-url-${Date.now()}`,
-    type: "sync-service-url",
-    source: "render",
-    target: "supabase",
-    action: "syncServiceUrl",
-    params: { renderServiceId, supabaseProjectRef },
-    description: `Sync Render service URL to Supabase project (${supabaseProjectRef})`,
-  }),
 };
 
 // ===== Execute a cross-service command via the backend =====
@@ -194,7 +114,6 @@ export async function executeAgentCommand(
   command: AgentCommand,
   credentials: {
     julesApiKey?: string;
-    supabasePAT?: string;
     renderApiKey?: string;
   }
 ): Promise<CommandResult> {
@@ -245,17 +164,6 @@ export function buildAgentSystemPrompt(context: ServiceMeshContext): string {
     );
   }
 
-  if (context.supabase.connected) {
-    parts.push(
-      `- Supabase: Connected${context.supabase.projectCount ? ` (${context.supabase.projectCount} projects)` : ""}. You can manage projects, check health, pause/restore, and retrieve API keys.`
-    );
-    if (context.supabase.projects?.length) {
-      parts.push(
-        `  Available projects: ${context.supabase.projects.map((p) => `${p.name} (${p.ref}, ${p.status})`).join(", ")}`
-      );
-    }
-  }
-
   if (context.render.connected) {
     parts.push(
       `- Render: Connected${context.render.servicesCount ? ` (${context.render.servicesCount} services, ${context.render.postgresCount ?? 0} Postgres instances)` : ""}. You can manage services, trigger deploys, check status, suspend/resume, and manage environment variables.`
@@ -275,9 +183,7 @@ export function buildAgentSystemPrompt(context: ServiceMeshContext): string {
   parts.push(
     "\nYou can execute cross-service commands. For example:",
     "- After code changes, deploy to Render",
-    "- Sync Supabase API keys as Render environment variables",
-    "- Check Supabase project health and restart Render services if needed",
-    "- Link Render Postgres databases to Supabase projects"
+    "- Check service health and restart if needed"
   );
 
   return parts.join("\n");
