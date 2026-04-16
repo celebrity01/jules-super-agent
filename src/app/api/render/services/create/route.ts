@@ -8,6 +8,18 @@ import { NextRequest, NextResponse } from "next/server";
  * Uses the Render API to create a web service from a GitHub repo.
  * Automatically fetches the ownerId from the Render API.
  * Docs: https://api-docs.render.com/reference/create-service
+ *
+ * Required structure for non-static, non-docker services:
+ * serviceDetails: {
+ *   env: "node",
+ *   region: "oregon",
+ *   plan: "starter",
+ *   numInstances: 1,
+ *   envSpecificDetails: {
+ *     buildCommand: "...",
+ *     startCommand: "..."
+ *   }
+ * }
  */
 export async function POST(req: NextRequest) {
   const token = req.headers.get("X-Render-Api-Key");
@@ -65,7 +77,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Step 2: Create the service with ownerId and serviceDetails
+    // Step 2: Create the service with ownerId and proper serviceDetails structure
     const serviceBody: Record<string, unknown> = {
       type: "web_service",
       name: name || repoName,
@@ -74,13 +86,14 @@ export async function POST(req: NextRequest) {
       branch: branch || "main",
       autoDeploy: "yes",
       serviceDetails: {
-        startCommand: startCommand || "npm start",
-        buildCommand: buildCommand || "npm install && npm run build",
-        plan: plan || "starter",
-        publishPath: "out",
-        numInstances: 1,
         env: "node",
         region: "oregon",
+        plan: plan || "starter",
+        numInstances: 1,
+        envSpecificDetails: {
+          buildCommand: buildCommand || "npm install && npm run build",
+          startCommand: startCommand || "npm start",
+        },
       },
     };
 
@@ -90,6 +103,8 @@ export async function POST(req: NextRequest) {
         value: String(value),
       }));
     }
+
+    console.log("Render create service payload:", JSON.stringify(serviceBody, null, 2));
 
     const res = await fetch("https://api.render.com/v1/services", {
       method: "POST",
@@ -111,7 +126,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!res.ok) {
-      console.error("Render service creation error:", data);
+      console.error("Render service creation error:", JSON.stringify(data, null, 2));
       return NextResponse.json(
         { error: data.message || `Failed to create service (${res.status})` },
         { status: res.status }
