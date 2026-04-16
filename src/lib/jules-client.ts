@@ -1,4 +1,6 @@
 // Client-side API helper for Jules API
+// Based on official Google Jules API v1alpha documentation
+// https://developers.google.com/jules/api/reference/rest
 
 export interface JulesSource {
   name: string;
@@ -16,6 +18,7 @@ export interface JulesSource {
 
 export interface JulesSession {
   name: string;
+  id?: string;
   title?: string;
   prompt?: string;
   sourceContext?: {
@@ -41,19 +44,78 @@ export interface JulesSession {
   };
 }
 
+// The real Jules API returns activities with nested type-specific objects
+// e.g., { planGenerated: { plan: {...} } } instead of { type: "PLAN_GENERATED" }
 export interface JulesActivity {
   name: string;
-  type?: string;
-  description?: string;
   createTime?: string;
-  bashOutput?: string;
+  originator?: "agent" | "user";
+  description?: string;
+  progress?: string;
+
+  // Nested type-specific fields (real API format)
+  planGenerated?: {
+    plan?: {
+      id?: string;
+      steps?: Array<{ description?: string }>;
+    };
+  };
+  bashOutput?: {
+    command?: string;
+    output?: string;
+    exitCode?: number;
+  };
   codeChange?: {
     file?: string;
     diff?: string;
     description?: string;
   };
-  progress?: string;
-  planStep?: number;
+  sessionCompleted?: {
+    pullRequestUrl?: string;
+    commitUrl?: string;
+    summary?: string;
+  };
+  prCreated?: {
+    pullRequestUrl?: string;
+  };
+  error?: {
+    message?: string;
+    code?: number;
+  };
+  planApproved?: {
+    planId?: string;
+  };
+  userMessage?: {
+    prompt?: string;
+  };
+
+  // Legacy flat format (for backward compatibility)
+  type?: string;
+  bashOutputLegacy?: string;
+  codeChangeLegacy?: {
+    file?: string;
+    diff?: string;
+    description?: string;
+  };
+}
+
+/**
+ * Determines the activity type from the nested fields.
+ * The Jules API uses presence of nested objects to indicate type.
+ */
+export function getActivityType(activity: JulesActivity): string {
+  if (activity.planGenerated) return "PLAN_GENERATED";
+  if (activity.bashOutput) return "BASH_OUTPUT";
+  if (activity.codeChange) return "CODE_CHANGE";
+  if (activity.sessionCompleted) return "SESSION_COMPLETED";
+  if (activity.prCreated) return "PR_CREATED";
+  if (activity.error) return "ERROR";
+  if (activity.planApproved) return "PLAN_APPROVED";
+  if (activity.userMessage) return "USER_MESSAGE";
+  if (activity.originator === "user") return "USER_MESSAGE";
+  // Legacy fallback
+  if (activity.type) return activity.type;
+  return "UNKNOWN";
 }
 
 const headers = (apiKey: string) => ({
@@ -65,26 +127,38 @@ export function getSourceDisplayName(source: JulesSource): string {
   if (source.githubRepo) {
     return `${source.githubRepo.owner}/${source.githubRepo.repo}`;
   }
-  // Fallback: try to parse from name (e.g., "sources/github/bobalover/boba")
   if (source.name) {
     const parts = source.name.split("/");
-    // Find "github" in the parts and take the next two as owner/repo
     const githubIndex = parts.indexOf("github");
     if (githubIndex >= 0 && parts.length > githubIndex + 2) {
       return `${parts[githubIndex + 1]}/${parts[githubIndex + 2]}`;
     }
   }
-  // Last resort: use the last segment
   return source.name.split("/").pop() || source.name;
 }
 
-export async function listSources(apiKey: string): Promise<{ sources?: JulesSource[] }> {
+export function getSourceBranch(source: JulesSource): string {
+  return source.githubRepoContext?.defaultBranch || "main";
+}
+
+export async function listSources(apiKey: string): Promise<{ sources?: JulesSource[]; nextPageToken?: string }> {
   const res = await fetch("/api/jules/sources", {
     headers: headers(apiKey),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "Request failed" }));
     throw new Error(err.error || `Failed to fetch sources (${res.status})`);
+  }
+  return res.json();
+}
+
+export async function getSource(apiKey: string, sourceName: string): Promise<JulesSource> {
+  const res = await fetch(`/api/jules/sources/${encodeURIComponent(sourceName)}`, {
+    headers: headers(apiKey),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Request failed" }));
+    throw new Error(err.error || `Failed to fetch source (${res.status})`);
   }
   return res.json();
 }
@@ -199,7 +273,9 @@ export async function sendMessage(
     const err = await res.json().catch(() => ({ error: "Request failed" }));
     throw new Error(err.error || `Failed to send message (${res.status})`);
   }
-  return res.json();
+  // The API may return an empty body on success
+  const text = await res.text();
+  try { return JSON.parse(text); } catch { return { success: true }; }
 }
 
 // ===== GitHub API types and helpers =====
