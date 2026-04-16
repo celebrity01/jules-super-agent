@@ -17,14 +17,14 @@ export function ApiKeySetup({ onConnect }: ApiKeySetupProps) {
   const [error, setError] = useState<string | null>(null);
 
   const handleConnect = async () => {
-    if (!apiKey.trim()) { setError("Please enter your API key"); return; }
+    if (!apiKey.trim()) { setError("Please enter your Google OAuth access token"); return; }
     setIsLoading(true);
     setError(null);
     try {
       await listSources(apiKey.trim());
       onConnect(apiKey.trim());
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Invalid API key");
+      setError(err instanceof Error ? err.message : "Invalid OAuth token — make sure it has the Jules API scope");
     } finally {
       setIsLoading(false);
     }
