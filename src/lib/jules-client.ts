@@ -48,7 +48,7 @@ export interface SessionOutput {
 }
 
 export type AutomationMode = "AUTOMATION_MODE_UNSPECIFIED" | "AUTO_CREATE_PR";
-export type SessionState = "STATE_UNSPECIFIED" | "ACTIVE" | "AWAITING_APPROVAL" | "COMPLETED" | "FAILED";
+export type SessionState = "SESSION_STATE_UNSPECIFIED" | "RUNNING" | "AWAITING_APPROVAL" | "AWAITING_PLAN_APPROVAL" | "COMPLETED" | "FAILED" | "CANCELLED" | "ACTIVE";
 
 export interface JulesSession {
   name: string;

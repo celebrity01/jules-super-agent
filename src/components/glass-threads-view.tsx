@@ -49,9 +49,13 @@ function getStateBadge(state?: string): { label: string; color: string; classNam
       return { label: "COMPLETED", color: "#00E676", className: "status-badge-completed" };
     case "FAILED":
       return { label: "FAILED", color: "#FF2A5F", className: "status-badge-failed" };
+    case "CANCELLED":
+      return { label: "CANCELLED", color: "#547B88", className: "status-badge" };
     case "ACTIVE":
+    case "RUNNING":
       return { label: "RUNNING", color: "#00E5FF", className: "status-badge-running" };
     case "AWAITING_APPROVAL":
+    case "AWAITING_PLAN_APPROVAL":
       return { label: "AWAITING", color: "#B388FF", className: "status-badge-awaiting" };
     default:
       return { label: "UNKNOWN", color: "#547B88", className: "status-badge" };

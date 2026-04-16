@@ -45,18 +45,25 @@ export function GlassPingsView({ sessions, onAddRepo }: GlassPingsViewProps) {
             msg: `Mission Failed: ${s.title || sessionId}`,
           };
         }
-        if (s.state === "AWAITING_APPROVAL") {
+        if (s.state === "AWAITING_APPROVAL" || s.state === "AWAITING_PLAN_APPROVAL") {
           return {
             time: s.createTime ? formatTime(s.createTime) : "--:--:--",
             type: "warning" as const,
             msg: `Approval Required: ${s.title || sessionId}`,
           };
         }
-        if (s.state === "ACTIVE") {
+        if (s.state === "ACTIVE" || s.state === "RUNNING") {
           return {
             time: s.createTime ? formatTime(s.createTime) : "--:--:--",
             type: "info" as const,
             msg: `Mission Active: ${s.title || sessionId}`,
+          };
+        }
+        if (s.state === "CANCELLED") {
+          return {
+            time: s.createTime ? formatTime(s.createTime) : "--:--:--",
+            type: "error" as const,
+            msg: `Mission Cancelled: ${s.title || sessionId}`,
           };
         }
         return null;

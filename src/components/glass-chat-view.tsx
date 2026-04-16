@@ -31,6 +31,7 @@ import {
   GitPullRequest,
   ChevronDown,
   MessageSquare,
+  ShieldCheck,
 } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -55,14 +56,20 @@ function getStateInfo(state?: string): { label: string; color: string } {
   switch (state) {
     case "COMPLETED": return { label: "Completed", color: "#00E676" };
     case "FAILED": return { label: "Failed", color: "#FF2A5F" };
-    case "ACTIVE": return { label: "Running", color: "#00E5FF" };
+    case "ACTIVE":
+    case "RUNNING": return { label: "Running", color: "#00E5FF" };
     case "AWAITING_APPROVAL": return { label: "Awaiting Approval", color: "#B388FF" };
+    case "AWAITING_PLAN_APPROVAL": return { label: "Awaiting Plan Approval", color: "#B388FF" };
     default: return { label: "Unknown", color: "#547B88" };
   }
 }
 
 function isActiveState(state?: string): boolean {
-  return state === "ACTIVE" || state === "AWAITING_APPROVAL";
+  return state === "ACTIVE" || state === "RUNNING" || state === "AWAITING_APPROVAL" || state === "AWAITING_PLAN_APPROVAL";
+}
+
+function isAwaitingApproval(state?: string): boolean {
+  return state === "AWAITING_APPROVAL" || state === "AWAITING_PLAN_APPROVAL";
 }
 
 export function GlassChatView({ sessionId, apiKey, onBack, onAddRepo }: GlassChatViewProps) {
@@ -72,6 +79,7 @@ export function GlassChatView({ sessionId, apiKey, onBack, onAddRepo }: GlassCha
   const [messageInput, setMessageInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [copyId, setCopyId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -93,11 +101,12 @@ export function GlassChatView({ sessionId, apiKey, onBack, onAddRepo }: GlassCha
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Auto-refresh for active sessions
   useEffect(() => {
     if (!session || !isActiveState(session.state)) return;
     const interval = setInterval(fetchData, 5000);
     return () => clearInterval(interval);
-  }, [session, fetchData]);
+  }, [session?.state, fetchData]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -119,14 +128,20 @@ export function GlassChatView({ sessionId, apiKey, onBack, onAddRepo }: GlassCha
 
   const handleSend = async () => {
     if (!messageInput.trim()) return;
+    const msg = messageInput.trim();
     setIsSending(true);
+    setSendError(null);
     try {
-      await sendMessage(apiKey, sessionId, messageInput.trim());
+      await sendMessage(apiKey, sessionId, msg);
       setMessageInput("");
       if (inputRef.current) inputRef.current.style.height = "auto";
+      // Refresh data to show the new message
       await fetchData();
     } catch (err) {
       console.error("Failed to send:", err);
+      setSendError(err instanceof Error ? err.message : "Failed to send message");
+      // Keep the message in input so user doesn't lose it
+      setMessageInput(msg);
     } finally {
       setIsSending(false);
     }
@@ -155,6 +170,11 @@ export function GlassChatView({ sessionId, apiKey, onBack, onAddRepo }: GlassCha
   // Get PR URL from session outputs
   const pullRequestUrl = session?.outputs?.find(o => o.pullRequest)?.pullRequest?.url;
   const commitUrl = session?.outputs?.find(o => o.commitUrl)?.commitUrl;
+
+  // Check if there's a PLAN_GENERATED activity that hasn't been approved yet
+  const hasPendingPlan = activities.some(a => getActivityType(a) === "PLAN_GENERATED") &&
+    !activities.some(a => getActivityType(a) === "PLAN_APPROVED");
+  const needsApproval = isAwaitingApproval(session?.state) || hasPendingPlan;
 
   if (isLoading) {
     return (
@@ -212,14 +232,14 @@ export function GlassChatView({ sessionId, apiKey, onBack, onAddRepo }: GlassCha
           </div>
         </div>
         <div className="flex items-center gap-1">
-          {session.state === "AWAITING_APPROVAL" && (
+          {needsApproval && (
             <button
               onClick={handleApprove}
               disabled={isApproving}
-              className="px-3 py-1.5 bg-[#00E676] text-[#071115] rounded-xl text-xs font-bold active:scale-95 transition-all flex items-center gap-1.5"
+              className="px-4 py-2 bg-[#B388FF] text-[#071115] rounded-xl text-xs font-bold active:scale-95 transition-all flex items-center gap-1.5 shadow-[0_4px_15px_rgba(179,136,255,0.3)]"
             >
               {isApproving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-              Approve
+              Approve Plan
             </button>
           )}
           {pullRequestUrl && (
@@ -228,8 +248,9 @@ export function GlassChatView({ sessionId, apiKey, onBack, onAddRepo }: GlassCha
               target="_blank"
               rel="noopener noreferrer"
               className="p-2.5 text-[#00E676] hover:bg-white/5 rounded-full transition-all"
+              title="View Pull Request"
             >
-              <ExternalLink size={20} />
+              <GitPullRequest size={20} />
             </a>
           )}
           {session.url && (
@@ -238,6 +259,7 @@ export function GlassChatView({ sessionId, apiKey, onBack, onAddRepo }: GlassCha
               target="_blank"
               rel="noopener noreferrer"
               className="p-2.5 text-[#00E5FF] hover:bg-white/5 rounded-full transition-all"
+              title="View on Jules"
             >
               <ExternalLink size={20} />
             </a>
@@ -252,7 +274,7 @@ export function GlassChatView({ sessionId, apiKey, onBack, onAddRepo }: GlassCha
       </header>
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-5 flex flex-col gap-4 pb-32 z-10">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-5 flex flex-col gap-4 pb-40 z-10">
         {activities.length === 0 && (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
             <div className="w-24 h-24 glass-surface flex items-center justify-center rounded-2xl text-[#00E5FF] mb-8 shadow-[0_0_50px_rgba(0,229,255,0.1)] border border-white/10">
@@ -265,24 +287,60 @@ export function GlassChatView({ sessionId, apiKey, onBack, onAddRepo }: GlassCha
           </div>
         )}
 
-        {activities.map((activity) => (
+        {activities.map((activity, index) => (
           <ActivityMessage
             key={activity.name}
             activity={activity}
+            isLastActivity={index === activities.length - 1}
+            needsApproval={needsApproval}
+            isApproving={isApproving}
+            onApprove={handleApprove}
             copyId={copyId}
             onCopy={copyToClipboard}
           />
         ))}
       </div>
 
+      {/* Approval Banner - shows prominently when plan needs approval */}
+      {needsApproval && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 w-full max-w-3xl px-4 z-20">
+          <div className="bg-[#B388FF]/10 border border-[#B388FF]/30 rounded-2xl p-4 flex items-center justify-between backdrop-blur-md shadow-[0_10px_30px_rgba(179,136,255,0.15)]">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-[#B388FF]/20 rounded-xl flex items-center justify-center">
+                <ShieldCheck size={20} className="text-[#B388FF]" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-[#B388FF]">Plan Awaiting Approval</p>
+                <p className="text-[10px] text-[#547B88] font-mono">Jules needs your approval to proceed</p>
+              </div>
+            </div>
+            <button
+              onClick={handleApprove}
+              disabled={isApproving}
+              className="px-5 py-3 bg-[#B388FF] text-[#071115] rounded-xl text-sm font-bold active:scale-95 transition-all flex items-center gap-2 shadow-[0_4px_20px_rgba(179,136,255,0.4)] disabled:opacity-50"
+            >
+              {isApproving ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+              Approve
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Input */}
       <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-3xl glass-surface p-4 glass-border-t z-30 pb-safe">
+        {/* Error message */}
+        {sendError && (
+          <div className="mb-3 px-4 py-2 bg-[#FF2A5F]/10 border border-[#FF2A5F]/20 rounded-xl text-xs text-[#FF2A5F] flex items-center justify-between">
+            <span>{sendError}</span>
+            <button onClick={() => setSendError(null)} className="text-[#FF2A5F] ml-2 font-bold">✕</button>
+          </div>
+        )}
         <div className="flex gap-3 items-end max-w-3xl mx-auto">
           <div className="flex-1 bg-white/5 border border-white/10 px-5 py-3 flex items-center rounded-2xl focus-within:border-[#00E5FF]/40 transition-all shadow-inner">
             <textarea
               ref={inputRef}
               rows={1}
-              placeholder={isCompleted ? "Session completed" : "Initialize instruction..."}
+              placeholder={isCompleted ? "Session completed" : needsApproval ? "Reply or approve plan..." : "Send message to Jules..."}
               value={messageInput}
               onChange={handleInput}
               onKeyDown={handleKeyDown}
@@ -306,10 +364,18 @@ export function GlassChatView({ sessionId, apiKey, onBack, onAddRepo }: GlassCha
 /* Individual Activity Message Bubble */
 function ActivityMessage({
   activity,
+  isLastActivity,
+  needsApproval,
+  isApproving,
+  onApprove,
   copyId,
   onCopy,
 }: {
   activity: JulesActivity;
+  isLastActivity: boolean;
+  needsApproval: boolean;
+  isApproving: boolean;
+  onApprove: () => void;
   copyId: string | null;
   onCopy: (text: string, id: string) => void;
 }) {
@@ -358,13 +424,28 @@ function ActivityMessage({
 
         {/* Plan Generated */}
         {type === "PLAN_GENERATED" && (
-          <PlanContent
-            plan={activity.planGenerated?.plan}
-            description={activity.description}
-            isExpanded={isExpanded}
-            onToggle={() => setIsExpanded(!isExpanded)}
-            timeStr={timeStr}
-          />
+          <div>
+            <PlanContent
+              plan={activity.planGenerated?.plan}
+              description={activity.description}
+              isExpanded={isExpanded}
+              onToggle={() => setIsExpanded(!isExpanded)}
+              timeStr={timeStr}
+            />
+            {/* Inline Approve button right after the plan */}
+            {needsApproval && (
+              <div className="mt-4 pt-3 border-t border-[#B388FF]/20">
+                <button
+                  onClick={onApprove}
+                  disabled={isApproving}
+                  className="w-full py-3 bg-[#B388FF] text-[#071115] rounded-xl text-sm font-bold active:scale-95 transition-all flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(179,136,255,0.3)] disabled:opacity-50"
+                >
+                  {isApproving ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+                  Approve This Plan
+                </button>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Plan Approved */}
