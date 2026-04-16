@@ -17,7 +17,6 @@ export async function POST(req: NextRequest) {
       };
       credentials: {
         julesApiKey?: string;
-        supabasePAT?: string;
         renderApiKey?: string;
       };
     };
@@ -47,46 +46,10 @@ async function executeCommand(
   },
   credentials: {
     julesApiKey?: string;
-    supabasePAT?: string;
     renderApiKey?: string;
   }
 ): Promise<unknown> {
   const { target, action, params } = command;
-
-  // ===== Cross-service: Supabase → Render sync =====
-  if (command.type === "sync-env-vars" && target === "render") {
-    if (!credentials.supabasePAT || !credentials.renderApiKey) {
-      throw new Error("Both Supabase PAT and Render API key required");
-    }
-    const projectRef = params.supabaseProjectRef as string;
-    const serviceId = params.renderServiceId as string;
-
-    // Get Supabase API keys
-    const keysRes = await fetch(
-      `https://api.supabase.com/v1/projects/${projectRef}/api-keys`,
-      { headers: supabaseHeaders(credentials.supabasePAT) }
-    );
-    if (!keysRes.ok) throw new Error("Failed to fetch Supabase API keys");
-    const keys = await keysRes.json() as Array<{ name: string; api_key: string }>;
-
-    // Set as Render env vars
-    const envVars = keys.map((k) => ({
-      key: `SUPABASE_${k.name.toUpperCase().replace(/[^A-Z0-9]/g, "_")}`,
-      value: k.api_key,
-    }));
-
-    const envRes = await fetch(
-      `${getRenderBaseUrl()}/services/${serviceId}/env-vars`,
-      {
-        method: "PUT",
-        headers: renderHeaders(credentials.renderApiKey),
-        body: JSON.stringify(envVars),
-      }
-    );
-    if (!envRes.ok) throw new Error("Failed to set Render env vars");
-
-    return { success: true, syncedVars: envVars.length, serviceId, projectRef };
-  }
 
   // ===== Render target commands =====
   if (target === "render") {
@@ -186,73 +149,6 @@ async function executeCommand(
     }
   }
 
-  // ===== Supabase target commands =====
-  if (target === "supabase") {
-    if (!credentials.supabasePAT) {
-      throw new Error("Supabase PAT not configured");
-    }
-
-    switch (action) {
-      case "getHealth": {
-        const projectRef = params.supabaseProjectRef as string;
-        const healthRes = await fetch(
-          `https://api.supabase.com/v1/projects/${projectRef}/health`,
-          { headers: supabaseHeaders(credentials.supabasePAT) }
-        );
-        if (!healthRes.ok) {
-          throw new Error(`Health check failed (${healthRes.status})`);
-        }
-        return healthRes.json();
-      }
-
-      case "pauseProject": {
-        const projectRef = params.supabaseProjectRef as string;
-        const pauseRes = await fetch(
-          `https://api.supabase.com/v1/projects/${projectRef}/pause`,
-          { method: "POST", headers: supabaseHeaders(credentials.supabasePAT) }
-        );
-        if (!pauseRes.ok) throw new Error(`Pause failed (${pauseRes.status})`);
-        return { success: true, projectRef };
-      }
-
-      case "restoreProject": {
-        const projectRef = params.supabaseProjectRef as string;
-        const restoreRes = await fetch(
-          `https://api.supabase.com/v1/projects/${projectRef}/restore`,
-          { method: "POST", headers: supabaseHeaders(credentials.supabasePAT) }
-        );
-        if (!restoreRes.ok) throw new Error(`Restore failed (${restoreRes.status})`);
-        return { success: true, projectRef };
-      }
-
-      case "getApiKeys": {
-        const projectRef = params.supabaseProjectRef as string;
-        const keysRes = await fetch(
-          `https://api.supabase.com/v1/projects/${projectRef}/api-keys`,
-          { headers: supabaseHeaders(credentials.supabasePAT) }
-        );
-        if (!keysRes.ok) throw new Error(`Get API keys failed (${keysRes.status})`);
-        return keysRes.json();
-      }
-
-      case "linkDatabase": {
-        const renderPostgresId = params.renderPostgresId as string;
-        const projectRef = params.supabaseProjectRef as string;
-        return {
-          success: true,
-          link: {
-            renderPostgresId,
-            supabaseProjectRef: projectRef,
-            linkedAt: new Date().toISOString(),
-          },
-        };
-      }
-
-      default:
-        throw new Error(`Unknown Supabase action: ${action}`);
-    }
-  }
-
   throw new Error(`Unknown command target: ${target}`);
 }
 
@@ -266,13 +162,6 @@ function renderHeaders(apiKey: string): Record<string, string> {
   return {
     Authorization: `Bearer ${apiKey}`,
     Accept: "application/json",
-    "Content-Type": "application/json",
-  };
-}
-
-function supabaseHeaders(pat: string): Record<string, string> {
-  return {
-    Authorization: `Bearer ${pat}`,
     "Content-Type": "application/json",
   };
 }
