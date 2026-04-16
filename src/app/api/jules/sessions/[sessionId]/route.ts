@@ -8,16 +8,15 @@ export async function GET(
 ) {
   const apiKey = req.headers.get("X-Jules-Api-Key");
   if (!apiKey) {
-    return NextResponse.json({ error: "API key is required" }, { status: 401 });
+    return NextResponse.json({ error: "OAuth token is required" }, { status: 401 });
   }
 
   try {
     const { sessionId } = await params;
-    // The sessionId may be "sessions/xxx" or just "xxx"
     const name = sessionId.includes("/") ? sessionId : `sessions/${sessionId}`;
     const res = await fetch(`${JULES_BASE}/${name}`, {
       headers: {
-        "X-Goog-Api-Key": apiKey,
+        "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
     });
