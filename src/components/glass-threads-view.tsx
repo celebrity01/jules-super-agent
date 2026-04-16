@@ -1,6 +1,6 @@
 "use client";
 
-import { JulesSession, JulesSource } from "@/lib/jules-client";
+import { JulesSession, JulesSource, getSourceDisplayName } from "@/lib/jules-client";
 import {
   Terminal,
   MessageSquare,
@@ -50,7 +50,6 @@ function getStateBadge(state?: string): { label: string; color: string; classNam
     case "FAILED":
       return { label: "FAILED", color: "#FF2A5F", className: "status-badge-failed" };
     case "ACTIVE":
-    case "RUNNING":
       return { label: "RUNNING", color: "#00E5FF", className: "status-badge-running" };
     case "AWAITING_APPROVAL":
       return { label: "AWAITING", color: "#B388FF", className: "status-badge-awaiting" };

@@ -1,6 +1,6 @@
 "use client";
 
-import { JulesSource } from "@/lib/jules-client";
+import { JulesSource, getSourceDisplayName, getSourceBranch } from "@/lib/jules-client";
 import {
   Library,
   Database,
@@ -20,9 +20,7 @@ interface GlassMCPViewProps {
   onRefresh: () => void;
 }
 
-function getSourceDisplayName(source: JulesSource): string {
-  return source.name.replace("sources/", "").replace("https://github.com/", "");
-}
+// Use the shared getSourceDisplayName from jules-client
 
 export function GlassMCPView({
   sources,

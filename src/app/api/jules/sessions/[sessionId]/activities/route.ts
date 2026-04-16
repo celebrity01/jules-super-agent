@@ -13,11 +13,13 @@ export async function GET(
 
   try {
     const { sessionId } = await params;
+    // The sessionId may be "sessions/xxx" or just "xxx"
+    const name = sessionId.includes("/") ? sessionId : `sessions/${sessionId}`;
     const { searchParams } = new URL(req.url);
-    const pageSize = searchParams.get("pageSize") || "30";
+    const pageSize = searchParams.get("pageSize") || "50";
     const pageToken = searchParams.get("pageToken") || "";
 
-    let url = `${JULES_BASE}/sessions/${sessionId}/activities?pageSize=${pageSize}`;
+    let url = `${JULES_BASE}/${name}/activities?pageSize=${pageSize}`;
     if (pageToken) {
       url += `&pageToken=${pageToken}`;
     }

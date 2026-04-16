@@ -1,6 +1,17 @@
 "use client";
 
-import { JulesSession, JulesActivity, getSession, listActivities, approvePlan, sendMessage } from "@/lib/jules-client";
+import {
+  JulesSession,
+  JulesActivity,
+  getActivityType,
+  isUserActivity,
+  getBashArtifact,
+  getChangeSetArtifact,
+  getSession,
+  listActivities,
+  approvePlan,
+  sendMessage,
+} from "@/lib/jules-client";
 import {
   ArrowLeft,
   Bot,
@@ -19,7 +30,7 @@ import {
   Sparkles,
   GitPullRequest,
   ChevronDown,
-  Play,
+  MessageSquare,
 } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -40,27 +51,18 @@ function formatTime(dateStr: string): string {
   }
 }
 
-function formatFullDate(dateStr: string): string {
-  try {
-    return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true });
-  } catch {
-    return dateStr;
-  }
-}
-
 function getStateInfo(state?: string): { label: string; color: string } {
   switch (state) {
     case "COMPLETED": return { label: "Completed", color: "#00E676" };
     case "FAILED": return { label: "Failed", color: "#FF2A5F" };
-    case "ACTIVE":
-    case "RUNNING": return { label: "Running", color: "#00E5FF" };
+    case "ACTIVE": return { label: "Running", color: "#00E5FF" };
     case "AWAITING_APPROVAL": return { label: "Awaiting Approval", color: "#B388FF" };
     default: return { label: "Unknown", color: "#547B88" };
   }
 }
 
 function isActiveState(state?: string): boolean {
-  return state === "ACTIVE" || state === "RUNNING" || state === "AWAITING_APPROVAL";
+  return state === "ACTIVE" || state === "AWAITING_APPROVAL";
 }
 
 export function GlassChatView({ sessionId, apiKey, onBack, onAddRepo }: GlassChatViewProps) {
@@ -82,8 +84,8 @@ export function GlassChatView({ sessionId, apiKey, onBack, onAddRepo }: GlassCha
       ]);
       setSession(sessionData);
       setActivities(activityData.activities || []);
-    } catch {
-      // silent
+    } catch (err) {
+      console.error("Failed to fetch session data:", err);
     } finally {
       setIsLoading(false);
     }
@@ -149,6 +151,10 @@ export function GlassChatView({ sessionId, apiKey, onBack, onAddRepo }: GlassCha
       setTimeout(() => setCopyId(null), 2000);
     });
   };
+
+  // Get PR URL from session outputs
+  const pullRequestUrl = session?.outputs?.find(o => o.pullRequest)?.pullRequest?.url;
+  const commitUrl = session?.outputs?.find(o => o.commitUrl)?.commitUrl;
 
   if (isLoading) {
     return (
@@ -216,12 +222,22 @@ export function GlassChatView({ sessionId, apiKey, onBack, onAddRepo }: GlassCha
               Approve
             </button>
           )}
-          {session.output?.pullRequestUrl && (
+          {pullRequestUrl && (
             <a
-              href={session.output.pullRequestUrl}
+              href={pullRequestUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="p-2.5 text-[#00E676] hover:bg-white/5 rounded-full transition-all"
+            >
+              <ExternalLink size={20} />
+            </a>
+          )}
+          {session.url && (
+            <a
+              href={session.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2.5 text-[#00E5FF] hover:bg-white/5 rounded-full transition-all"
             >
               <ExternalLink size={20} />
             </a>
@@ -297,10 +313,16 @@ function ActivityMessage({
   copyId: string | null;
   onCopy: (text: string, id: string) => void;
 }) {
-  const isUser = activity.type === "USER_MESSAGE";
+  const type = getActivityType(activity);
+  const isUser = isUserActivity(activity);
   const timeStr = activity.createTime ? formatTime(activity.createTime) : "";
+
+  // Get artifacts
+  const bashArtifact = getBashArtifact(activity);
+  const changeSetArtifact = getChangeSetArtifact(activity);
+
   const [isExpanded, setIsExpanded] = useState(
-    !!(activity.bashOutput || activity.codeChange?.diff)
+    !!(bashArtifact || changeSetArtifact?.gitPatch?.unidiffPatch)
   );
 
   return (
@@ -311,16 +333,70 @@ function ActivityMessage({
             ? "glass-surface border-[#00E5FF]/30 text-[#E0F7FA]"
             : "glass-surface-heavy border-white/5 text-[#E0F7FA]"}`}
       >
-        {activity.type === "PLAN_GENERATED" && (
-          <PlanContent activity={activity} isExpanded={isExpanded} onToggle={() => setIsExpanded(!isExpanded)} timeStr={timeStr} />
+        {/* Agent Message */}
+        {type === "AGENT_MESSAGED" && activity.agentMessaged?.agentMessage && (
+          <div className="flex items-start gap-3">
+            <Bot size={16} className="text-[#00E5FF] shrink-0 mt-0.5" />
+            <div>
+              <p className="whitespace-pre-wrap">{activity.agentMessaged.agentMessage}</p>
+              {timeStr && <span className="block mt-2 text-[10px] text-[#547B88] font-mono text-right opacity-40">{timeStr}</span>}
+            </div>
+          </div>
         )}
-        {activity.type === "BASH_OUTPUT" && (
-          <TerminalContent activity={activity} isExpanded={isExpanded} onToggle={() => setIsExpanded(!isExpanded)} timeStr={timeStr} copyId={copyId} onCopy={onCopy} />
+
+        {/* User Message */}
+        {type === "USER_MESSAGED" && (
+          <>
+            <p>{activity.userMessaged?.userMessage || activity.description}</p>
+            {timeStr && (
+              <div className="mt-2 text-[10px] text-[#547B88] font-mono text-right tracking-widest uppercase opacity-40">
+                {timeStr}
+              </div>
+            )}
+          </>
         )}
-        {activity.type === "CODE_CHANGE" && (
-          <DiffContent activity={activity} isExpanded={isExpanded} onToggle={() => setIsExpanded(!isExpanded)} timeStr={timeStr} />
+
+        {/* Plan Generated */}
+        {type === "PLAN_GENERATED" && (
+          <PlanContent
+            plan={activity.planGenerated?.plan}
+            description={activity.description}
+            isExpanded={isExpanded}
+            onToggle={() => setIsExpanded(!isExpanded)}
+            timeStr={timeStr}
+          />
         )}
-        {activity.type === "SESSION_COMPLETED" && (
+
+        {/* Plan Approved */}
+        {type === "PLAN_APPROVED" && (
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-[#00E676]" />
+            <span className="text-sm text-[#00E676] font-medium">Plan Approved</span>
+            {activity.planApproved?.planId && (
+              <span className="text-[10px] text-[#547B88] font-mono">#{activity.planApproved.planId}</span>
+            )}
+            {timeStr && <span className="ml-auto text-[10px] text-[#547B88] font-mono opacity-40">{timeStr}</span>}
+          </div>
+        )}
+
+        {/* Progress Updated */}
+        {type === "PROGRESS_UPDATED" && (
+          <div className="flex items-start gap-3">
+            <Loader2 className="h-4 w-4 text-[#00E5FF] animate-spin shrink-0 mt-0.5" />
+            <div>
+              {activity.progressUpdated?.title && (
+                <p className="text-sm font-medium text-[#E0F7FA]">{activity.progressUpdated.title}</p>
+              )}
+              {activity.progressUpdated?.description && (
+                <p className="text-xs text-[#547B88] mt-1">{activity.progressUpdated.description}</p>
+              )}
+              {timeStr && <span className="block mt-2 text-[10px] text-[#547B88] font-mono text-right opacity-40">{timeStr}</span>}
+            </div>
+          </div>
+        )}
+
+        {/* Session Completed */}
+        {type === "SESSION_COMPLETED" && (
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-[rgba(0,230,118,0.1)] flex items-center justify-center shrink-0">
               <Sparkles className="h-5 w-5 text-[#00E676]" />
@@ -332,49 +408,57 @@ function ActivityMessage({
             {timeStr && <span className="ml-auto text-[10px] text-[#547B88] font-mono opacity-40">{timeStr}</span>}
           </div>
         )}
-        {activity.type === "PR_CREATED" && (
-          <div className="flex items-center gap-2">
-            <GitPullRequest className="h-4 w-4 text-[#00E676]" />
-            <span className="text-sm text-[#00E676] font-medium">Pull Request Created</span>
+
+        {/* Session Failed */}
+        {type === "SESSION_FAILED" && (
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[rgba(255,42,95,0.1)] flex items-center justify-center shrink-0">
+              <AlertCircle className="h-5 w-5 text-[#FF2A5F]" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-[#FF2A5F]">Mission Failed</p>
+              {activity.sessionFailed?.reason && <p className="text-xs text-[#547B88] mt-0.5">{activity.sessionFailed.reason}</p>}
+            </div>
             {timeStr && <span className="ml-auto text-[10px] text-[#547B88] font-mono opacity-40">{timeStr}</span>}
           </div>
         )}
-        {activity.type === "ERROR" && (
-          <div className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 text-[#FF2A5F]" />
-            <p className="text-sm text-[#FF2A5F]">{activity.description || "An error occurred"}</p>
-            {timeStr && <span className="ml-auto text-[10px] text-[#547B88] font-mono opacity-40">{timeStr}</span>}
+
+        {/* Bash Output Artifact */}
+        {bashArtifact && (
+          <TerminalContent
+            command={bashArtifact.command || ""}
+            output={bashArtifact.output || ""}
+            exitCode={bashArtifact.exitCode}
+            isExpanded={isExpanded}
+            onToggle={() => setIsExpanded(!isExpanded)}
+            timeStr={timeStr}
+            activityName={activity.name}
+            copyId={copyId}
+            onCopy={onCopy}
+          />
+        )}
+
+        {/* Code Change Artifact */}
+        {changeSetArtifact?.gitPatch?.unidiffPatch && (
+          <DiffContent
+            patch={changeSetArtifact.gitPatch.unidiffPatch}
+            source={changeSetArtifact.source || ""}
+            suggestedMessage={changeSetArtifact.gitPatch.suggestedCommitMessage}
+            isExpanded={isExpanded}
+            onToggle={() => setIsExpanded(!isExpanded)}
+            timeStr={timeStr}
+          />
+        )}
+
+        {/* Fallback for unknown types */}
+        {type === "UNKNOWN" && activity.description && (
+          <div className="flex items-start gap-3">
+            <MessageSquare size={16} className="text-[#547B88] shrink-0 mt-0.5" />
+            <div>
+              <p>{activity.description}</p>
+              {timeStr && <span className="block mt-2 text-[10px] text-[#547B88] font-mono text-right opacity-40">{timeStr}</span>}
+            </div>
           </div>
-        )}
-        {activity.type === "PLAN_APPROVED" && (
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 text-[#00E676]" />
-            <span className="text-sm text-[#00E676] font-medium">Plan Approved</span>
-            {timeStr && <span className="ml-auto text-[10px] text-[#547B88] font-mono opacity-40">{timeStr}</span>}
-          </div>
-        )}
-        {activity.type === "USER_MESSAGE" && (
-          <>
-            <p>{activity.description}</p>
-            {timeStr && (
-              <div className="mt-2 text-[10px] text-[#547B88] font-mono text-right tracking-widest uppercase opacity-40">
-                {timeStr}
-              </div>
-            )}
-          </>
-        )}
-        {/* Default fallback */}
-        {activity.type && !["PLAN_GENERATED", "BASH_OUTPUT", "CODE_CHANGE", "SESSION_COMPLETED", "PR_CREATED", "ERROR", "PLAN_APPROVED", "USER_MESSAGE"].includes(activity.type) && (
-          <>
-            {activity.description && <p>{activity.description}</p>}
-            {activity.progress && (
-              <div className="mt-2 flex items-center gap-2">
-                <Loader2 className="h-3 w-3 text-[#00E5FF] animate-spin" />
-                <span className="text-[10px] text-[#547B88]">{activity.progress}</span>
-              </div>
-            )}
-            {timeStr && <span className="mt-2 block text-[10px] text-[#547B88] font-mono text-right opacity-40">{timeStr}</span>}
-          </>
         )}
       </div>
     </div>
@@ -382,22 +466,46 @@ function ActivityMessage({
 }
 
 /* Plan Card */
-function PlanContent({ activity, isExpanded, onToggle, timeStr }: { activity: JulesActivity; isExpanded: boolean; onToggle: () => void; timeStr: string }) {
+function PlanContent({ plan, description, isExpanded, onToggle, timeStr }: {
+  plan?: { id?: string; steps?: Array<{ id?: string; title?: string; description?: string; index?: number }>; createTime?: string };
+  description?: string;
+  isExpanded: boolean;
+  onToggle: () => void;
+  timeStr: string;
+}) {
   return (
     <Collapsible open={isExpanded} onOpenChange={onToggle}>
       <div className="flex items-center justify-between cursor-pointer" onClick={onToggle}>
         <div className="flex items-center gap-2">
           <Lightbulb size={16} className="text-[#B388FF]" />
           <span className="text-xs font-bold text-[#B388FF]">Plan</span>
+          {plan?.steps && (
+            <span className="text-[10px] text-[#547B88] font-mono">{plan.steps.length} steps</span>
+          )}
         </div>
         <ChevronDown className={`h-4 w-4 text-[#547B88] transition-transform ${isExpanded ? "rotate-180" : ""}`} />
       </div>
-      {!isExpanded && activity.description && (
-        <p className="text-xs text-[#547B88] mt-2 line-clamp-2">{activity.description}</p>
+      {!isExpanded && description && (
+        <p className="text-xs text-[#547B88] mt-2 line-clamp-2">{description}</p>
       )}
       <CollapsibleContent>
-        {activity.description && (
-          <p className="text-sm text-[#E0F7FA] mt-3 leading-relaxed">{activity.description}</p>
+        {description && (
+          <p className="text-sm text-[#E0F7FA] mt-3 leading-relaxed">{description}</p>
+        )}
+        {plan?.steps && plan.steps.length > 0 && (
+          <div className="mt-3 space-y-2">
+            {plan.steps
+              .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+              .map((step, i) => (
+                <div key={step.id || i} className="flex items-start gap-3 p-2 bg-white/5 rounded-lg">
+                  <span className="text-[10px] font-mono text-[#B388FF] shrink-0 mt-0.5">{(step.index ?? i) + 1}.</span>
+                  <div>
+                    {step.title && <p className="text-sm font-medium text-[#E0F7FA]">{step.title}</p>}
+                    {step.description && <p className="text-xs text-[#547B88] mt-0.5">{step.description}</p>}
+                  </div>
+                </div>
+              ))}
+          </div>
         )}
       </CollapsibleContent>
       {timeStr && <span className="block mt-2 text-[10px] text-[#547B88] font-mono text-right opacity-40">{timeStr}</span>}
@@ -406,41 +514,54 @@ function PlanContent({ activity, isExpanded, onToggle, timeStr }: { activity: Ju
 }
 
 /* Terminal Card */
-function TerminalContent({ activity, isExpanded, onToggle, timeStr, copyId, onCopy }: { activity: JulesActivity; isExpanded: boolean; onToggle: () => void; timeStr: string; copyId: string | null; onCopy: (text: string, id: string) => void }) {
+function TerminalContent({ command, output, exitCode, isExpanded, onToggle, timeStr, activityName, copyId, onCopy }: {
+  command: string;
+  output: string;
+  exitCode?: number;
+  isExpanded: boolean;
+  onToggle: () => void;
+  timeStr: string;
+  activityName: string;
+  copyId: string | null;
+  onCopy: (text: string, id: string) => void;
+}) {
   return (
     <Collapsible open={isExpanded} onOpenChange={onToggle}>
       <div className="flex items-center justify-between cursor-pointer" onClick={onToggle}>
         <div className="flex items-center gap-2">
           <Terminal size={14} className="text-[#547B88]" />
           <span className="text-[10px] font-mono text-[#547B88]">bash</span>
+          {exitCode !== undefined && (
+            <span className={`text-[9px] font-mono ${exitCode === 0 ? "text-[#00E676]" : "text-[#FF2A5F]"}`}>
+              exit {exitCode}
+            </span>
+          )}
         </div>
         <ChevronDown className={`h-3 w-3 text-[#547B88] transition-transform ${isExpanded ? "rotate-180" : ""}`} />
       </div>
       <CollapsibleContent>
         <div className="mt-3 relative">
-          {activity.bashOutput && (
-            <button
-              onClick={() => onCopy(activity.bashOutput!, activity.name)}
-              className="absolute right-2 top-2 p-1.5 bg-black/40 border border-white/10 text-[#547B88] hover:text-[#00E5FF] rounded-lg transition-all z-10"
-            >
-              {copyId === activity.name ? <Check size={14} className="text-[#00E676]" /> : <Copy size={14} />}
-            </button>
-          )}
-          <pre className="bg-[#04090B]/60 p-4 rounded-xl font-mono text-[12px] overflow-x-auto text-[#00E5FF]/80 leading-6 border border-white/5 backdrop-blur-sm">
-            {activity.description && (
+          <button
+            onClick={() => onCopy(output || command, activityName)}
+            className="absolute right-2 top-2 p-1.5 bg-black/40 border border-white/10 text-[#547B88] hover:text-[#00E5FF] rounded-lg transition-all z-10"
+          >
+            {copyId === activityName ? <Check size={14} className="text-[#00E676]" /> : <Copy size={14} />}
+          </button>
+          <pre className="bg-[#04090B]/60 p-4 rounded-xl font-mono text-[12px] overflow-x-auto text-[#00E5FF]/80 leading-6 border border-white/5 backdrop-blur-sm max-h-64 overflow-y-auto">
+            {command && (
               <div className="mb-2">
                 <span className="text-[#00E676] font-semibold">$</span>{" "}
-                <span className="text-[#547B88]">{activity.description}</span>
+                <span className="text-[#547B88]">{command}</span>
               </div>
             )}
-            {activity.bashOutput && <code>{activity.bashOutput}</code>}
+            {output && <code>{output}</code>}
           </pre>
         </div>
       </CollapsibleContent>
-      {!isExpanded && activity.description && (
+      {!isExpanded && command && (
         <div className="mt-2">
           <span className="text-[10px] font-mono text-[#00E676]">$</span>{" "}
-          <span className="text-[10px] font-mono text-[#547B88]">{activity.description}</span>
+          <span className="text-[10px] font-mono text-[#547B88]">{command}</span>
         </div>
       )}
       {timeStr && <span className="block mt-2 text-[10px] text-[#547B88] font-mono text-right opacity-40">{timeStr}</span>}
@@ -449,21 +570,28 @@ function TerminalContent({ activity, isExpanded, onToggle, timeStr, copyId, onCo
 }
 
 /* Diff Card */
-function DiffContent({ activity, isExpanded, onToggle, timeStr }: { activity: JulesActivity; isExpanded: boolean; onToggle: () => void; timeStr: string }) {
+function DiffContent({ patch, source, suggestedMessage, isExpanded, onToggle, timeStr }: {
+  patch: string;
+  source: string;
+  suggestedMessage?: string;
+  isExpanded: boolean;
+  onToggle: () => void;
+  timeStr: string;
+}) {
   return (
     <Collapsible open={isExpanded} onOpenChange={onToggle}>
       <div className="flex items-center justify-between cursor-pointer" onClick={onToggle}>
         <div className="flex items-center gap-2">
           <FileCode2 size={14} className="text-[#00E5FF]" />
           <span className="text-[10px] font-mono text-[#547B88] truncate max-w-[200px]">
-            {activity.codeChange?.file || "Code Change"}
+            {source ? source.replace("sources/", "") : "Code Change"}
           </span>
         </div>
         <ChevronDown className={`h-3 w-3 text-[#547B88] shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
       </div>
       <CollapsibleContent>
         <div className="mt-3 bg-[#04090B]/60 p-4 rounded-xl font-mono text-[12px] overflow-x-auto leading-6 border border-white/5 backdrop-blur-sm max-h-64 overflow-y-auto">
-          {activity.codeChange?.diff && activity.codeChange.diff.split("\n").map((line, i) => (
+          {patch.split("\n").map((line, i) => (
             <div
               key={i}
               className={
@@ -476,10 +604,10 @@ function DiffContent({ activity, isExpanded, onToggle, timeStr }: { activity: Ju
             </div>
           ))}
         </div>
+        {suggestedMessage && (
+          <p className="text-[10px] text-[#547B88] mt-2 italic">Suggested: {suggestedMessage}</p>
+        )}
       </CollapsibleContent>
-      {!isExpanded && activity.codeChange?.description && (
-        <p className="text-[10px] text-[#547B88] mt-2 truncate">{activity.codeChange.description}</p>
-      )}
       {timeStr && <span className="block mt-2 text-[10px] text-[#547B88] font-mono text-right opacity-40">{timeStr}</span>}
     </Collapsible>
   );

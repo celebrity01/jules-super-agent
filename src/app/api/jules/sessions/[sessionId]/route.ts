@@ -13,7 +13,9 @@ export async function GET(
 
   try {
     const { sessionId } = await params;
-    const res = await fetch(`${JULES_BASE}/sessions/${sessionId}`, {
+    // The sessionId may be "sessions/xxx" or just "xxx"
+    const name = sessionId.includes("/") ? sessionId : `sessions/${sessionId}`;
+    const res = await fetch(`${JULES_BASE}/${name}`, {
       headers: {
         "X-Goog-Api-Key": apiKey,
         "Content-Type": "application/json",

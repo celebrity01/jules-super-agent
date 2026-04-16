@@ -2,120 +2,188 @@
 // Based on official Google Jules API v1alpha documentation
 // https://developers.google.com/jules/api/reference/rest
 
+// ===== Source types (real API) =====
+
+export interface GitHubBranch {
+  displayName: string;
+}
+
+export interface GitHubRepo {
+  owner: string;
+  repo: string;
+  isPrivate?: boolean;
+  defaultBranch?: GitHubBranch;
+  branches?: GitHubBranch[];
+}
+
 export interface JulesSource {
   name: string;
   id?: string;
-  displayName?: string;
-  githubRepo?: {
-    owner: string;
-    repo: string;
-  };
+  githubRepo?: GitHubRepo;
+}
+
+// ===== Session types (real API) =====
+
+export interface SourceContext {
+  source: string;
   githubRepoContext?: {
-    repoUri?: string;
-    defaultBranch?: string;
+    startingBranch?: string;
   };
 }
+
+export interface PullRequest {
+  url: string;
+  title?: string;
+}
+
+export interface SessionOutput {
+  pullRequest?: PullRequest;
+  commitUrl?: string;
+  summary?: string;
+}
+
+export type AutomationMode = "AUTOMATION_MODE_UNSPECIFIED" | "AUTO_CREATE_PR";
+export type SessionState = "STATE_UNSPECIFIED" | "ACTIVE" | "AWAITING_APPROVAL" | "COMPLETED" | "FAILED";
 
 export interface JulesSession {
   name: string;
   id?: string;
+  prompt: string;
+  sourceContext?: SourceContext;
   title?: string;
-  prompt?: string;
-  sourceContext?: {
-    source?: string;
-    githubRepoContext?: {
-      startingBranch?: string;
-    };
-  };
-  automationMode?: string;
   requirePlanApproval?: boolean;
-  state?: string;
+  automationMode?: AutomationMode;
   createTime?: string;
   updateTime?: string;
-  output?: {
-    pullRequestUrl?: string;
-    commitUrl?: string;
-    summary?: string;
-  };
-  latestPlan?: {
-    steps?: Array<{
-      description?: string;
-    }>;
-  };
+  state?: SessionState;
+  url?: string;
+  outputs?: SessionOutput[];
 }
 
-// The real Jules API returns activities with nested type-specific objects
-// e.g., { planGenerated: { plan: {...} } } instead of { type: "PLAN_GENERATED" }
+// ===== Activity types (real API) =====
+
+export interface PlanStep {
+  id?: string;
+  title?: string;
+  description?: string;
+  index?: number;
+}
+
+export interface Plan {
+  id?: string;
+  steps?: PlanStep[];
+  createTime?: string;
+}
+
+export interface AgentMessaged {
+  agentMessage?: string;
+}
+
+export interface UserMessaged {
+  userMessage?: string;
+}
+
+export interface PlanGenerated {
+  plan?: Plan;
+}
+
+export interface PlanApproved {
+  planId?: string;
+}
+
+export interface ProgressUpdated {
+  title?: string;
+  description?: string;
+}
+
+export interface SessionCompleted {
+  // no fields per API spec
+}
+
+export interface SessionFailed {
+  reason?: string;
+}
+
+export interface GitPatch {
+  unidiffPatch?: string;
+  baseCommitId?: string;
+  suggestedCommitMessage?: string;
+}
+
+export interface ChangeSet {
+  source?: string;
+  gitPatch?: GitPatch;
+}
+
+export interface Media {
+  data?: string;
+  mimeType?: string;
+}
+
+export interface BashOutput {
+  command?: string;
+  output?: string;
+  exitCode?: number;
+}
+
+export interface Artifact {
+  changeSet?: ChangeSet;
+  media?: Media;
+  bashOutput?: BashOutput;
+}
+
 export interface JulesActivity {
   name: string;
-  createTime?: string;
-  originator?: "agent" | "user";
+  id?: string;
   description?: string;
-  progress?: string;
+  createTime?: string;
+  originator?: string; // "user" | "agent" | "system"
+  artifacts?: Artifact[];
 
-  // Nested type-specific fields (real API format)
-  planGenerated?: {
-    plan?: {
-      id?: string;
-      steps?: Array<{ description?: string }>;
-    };
-  };
-  bashOutput?: {
-    command?: string;
-    output?: string;
-    exitCode?: number;
-  };
-  codeChange?: {
-    file?: string;
-    diff?: string;
-    description?: string;
-  };
-  sessionCompleted?: {
-    pullRequestUrl?: string;
-    commitUrl?: string;
-    summary?: string;
-  };
-  prCreated?: {
-    pullRequestUrl?: string;
-  };
-  error?: {
-    message?: string;
-    code?: number;
-  };
-  planApproved?: {
-    planId?: string;
-  };
-  userMessage?: {
-    prompt?: string;
-  };
-
-  // Legacy flat format (for backward compatibility)
-  type?: string;
-  bashOutputLegacy?: string;
-  codeChangeLegacy?: {
-    file?: string;
-    diff?: string;
-    description?: string;
-  };
+  // Union field activity - only one will be set
+  agentMessaged?: AgentMessaged;
+  userMessaged?: UserMessaged;
+  planGenerated?: PlanGenerated;
+  planApproved?: PlanApproved;
+  progressUpdated?: ProgressUpdated;
+  sessionCompleted?: SessionCompleted;
+  sessionFailed?: SessionFailed;
 }
 
 /**
- * Determines the activity type from the nested fields.
+ * Determines the activity type from the union field.
  * The Jules API uses presence of nested objects to indicate type.
  */
 export function getActivityType(activity: JulesActivity): string {
+  if (activity.agentMessaged) return "AGENT_MESSAGED";
+  if (activity.userMessaged) return "USER_MESSAGED";
   if (activity.planGenerated) return "PLAN_GENERATED";
-  if (activity.bashOutput) return "BASH_OUTPUT";
-  if (activity.codeChange) return "CODE_CHANGE";
-  if (activity.sessionCompleted) return "SESSION_COMPLETED";
-  if (activity.prCreated) return "PR_CREATED";
-  if (activity.error) return "ERROR";
   if (activity.planApproved) return "PLAN_APPROVED";
-  if (activity.userMessage) return "USER_MESSAGE";
-  if (activity.originator === "user") return "USER_MESSAGE";
-  // Legacy fallback
-  if (activity.type) return activity.type;
+  if (activity.progressUpdated) return "PROGRESS_UPDATED";
+  if (activity.sessionCompleted) return "SESSION_COMPLETED";
+  if (activity.sessionFailed) return "SESSION_FAILED";
   return "UNKNOWN";
+}
+
+/**
+ * Checks if activity originated from user
+ */
+export function isUserActivity(activity: JulesActivity): boolean {
+  return activity.originator === "user" || !!activity.userMessaged;
+}
+
+/**
+ * Get the first bashOutput artifact from an activity
+ */
+export function getBashArtifact(activity: JulesActivity): BashOutput | null {
+  return activity.artifacts?.find(a => a.bashOutput)?.bashOutput || null;
+}
+
+/**
+ * Get the first changeSet artifact from an activity
+ */
+export function getChangeSetArtifact(activity: JulesActivity): ChangeSet | null {
+  return activity.artifacts?.find(a => a.changeSet)?.changeSet || null;
 }
 
 const headers = (apiKey: string) => ({
@@ -138,7 +206,7 @@ export function getSourceDisplayName(source: JulesSource): string {
 }
 
 export function getSourceBranch(source: JulesSource): string {
-  return source.githubRepoContext?.defaultBranch || "main";
+  return source.githubRepo?.defaultBranch?.displayName || "main";
 }
 
 export async function listSources(apiKey: string): Promise<{ sources?: JulesSource[]; nextPageToken?: string }> {
@@ -185,11 +253,8 @@ export async function createSession(
   apiKey: string,
   data: {
     prompt: string;
-    sourceContext: {
-      source: string;
-      githubRepoContext: { startingBranch: string };
-    };
-    automationMode?: string;
+    sourceContext: SourceContext;
+    automationMode?: AutomationMode;
     title?: string;
     requirePlanApproval?: boolean;
   }
@@ -210,7 +275,9 @@ export async function getSession(
   apiKey: string,
   sessionId: string
 ): Promise<JulesSession> {
-  const res = await fetch(`/api/jules/sessions/${sessionId}`, {
+  // Use full name format if not already
+  const name = sessionId.includes("/") ? sessionId : `sessions/${sessionId}`;
+  const res = await fetch(`/api/jules/sessions/${encodeURIComponent(name)}`, {
     headers: headers(apiKey),
   });
   if (!res.ok) {
@@ -224,7 +291,9 @@ export async function approvePlan(
   apiKey: string,
   sessionId: string
 ): Promise<unknown> {
-  const res = await fetch(`/api/jules/sessions/${sessionId}/approve`, {
+  // Use full name format if not already
+  const name = sessionId.includes("/") ? sessionId : `sessions/${sessionId}`;
+  const res = await fetch(`/api/jules/sessions/${encodeURIComponent(name)}/approve`, {
     method: "POST",
     headers: headers(apiKey),
   });
@@ -232,20 +301,24 @@ export async function approvePlan(
     const err = await res.json().catch(() => ({ error: "Request failed" }));
     throw new Error(err.error || `Failed to approve plan (${res.status})`);
   }
-  return res.json();
+  // approvePlan returns empty body on success
+  const text = await res.text();
+  try { return JSON.parse(text); } catch { return { success: true }; }
 }
 
 export async function listActivities(
   apiKey: string,
   sessionId: string,
-  pageSize = 30,
+  pageSize = 50,
   pageToken?: string
 ): Promise<{ activities?: JulesActivity[]; nextPageToken?: string }> {
+  // Use full name format if not already
+  const name = sessionId.includes("/") ? sessionId : `sessions/${sessionId}`;
   const params = new URLSearchParams({ pageSize: String(pageSize) });
   if (pageToken) params.set("pageToken", pageToken);
 
   const res = await fetch(
-    `/api/jules/sessions/${sessionId}/activities?${params}`,
+    `/api/jules/sessions/${encodeURIComponent(name)}/activities?${params}`,
     {
       headers: headers(apiKey),
     }
@@ -264,7 +337,9 @@ export async function sendMessage(
   sessionId: string,
   prompt: string
 ): Promise<unknown> {
-  const res = await fetch(`/api/jules/sessions/${sessionId}/message`, {
+  // Use full name format if not already
+  const name = sessionId.includes("/") ? sessionId : `sessions/${sessionId}`;
+  const res = await fetch(`/api/jules/sessions/${encodeURIComponent(name)}/message`, {
     method: "POST",
     headers: headers(apiKey),
     body: JSON.stringify({ prompt }),
@@ -273,7 +348,7 @@ export async function sendMessage(
     const err = await res.json().catch(() => ({ error: "Request failed" }));
     throw new Error(err.error || `Failed to send message (${res.status})`);
   }
-  // The API may return an empty body on success
+  // sendMessage returns empty body on success
   const text = await res.text();
   try { return JSON.parse(text); } catch { return { success: true }; }
 }

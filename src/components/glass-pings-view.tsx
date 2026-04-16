@@ -52,7 +52,7 @@ export function GlassPingsView({ sessions, onAddRepo }: GlassPingsViewProps) {
             msg: `Approval Required: ${s.title || sessionId}`,
           };
         }
-        if (s.state === "ACTIVE" || s.state === "RUNNING") {
+        if (s.state === "ACTIVE") {
           return {
             time: s.createTime ? formatTime(s.createTime) : "--:--:--",
             type: "info" as const,

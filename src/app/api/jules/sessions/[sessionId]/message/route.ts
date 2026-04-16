@@ -13,9 +13,11 @@ export async function POST(
 
   try {
     const { sessionId } = await params;
+    // The sessionId may be "sessions/xxx" or just "xxx"
+    const name = sessionId.includes("/") ? sessionId : `sessions/${sessionId}`;
     const body = await req.json();
     const res = await fetch(
-      `${JULES_BASE}/sessions/${sessionId}:sendMessage`,
+      `${JULES_BASE}/${name}:sendMessage`,
       {
         method: "POST",
         headers: {
@@ -25,8 +27,17 @@ export async function POST(
         body: JSON.stringify(body),
       }
     );
-    const data = await res.json();
-    return NextResponse.json(data, { status: res.status });
+    // sendMessage returns empty body on success
+    const text = await res.text();
+    if (!text) {
+      return NextResponse.json({ success: true }, { status: res.status });
+    }
+    try {
+      const data = JSON.parse(text);
+      return NextResponse.json(data, { status: res.status });
+    } catch {
+      return NextResponse.json({ success: true }, { status: res.status });
+    }
   } catch (error) {
     console.error("Failed to send message:", error);
     return NextResponse.json(
