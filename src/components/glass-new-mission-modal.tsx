@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Rocket,
   X,
@@ -13,16 +13,47 @@ import {
   FolderPlus,
   Search,
   Github,
+  Globe,
+  Lock,
+  Star,
 } from "lucide-react";
-import { JulesSource, createSession, getSourceDisplayName, getSourceBranch, AutomationMode } from "@/lib/jules-client";
+import {
+  JulesSource,
+  GitHubRepoInfo,
+  getSourceDisplayName,
+  getSourceBranch,
+  AutomationMode,
+  getGitHubRepos,
+} from "@/lib/jules-client";
 
 interface GlassNewMissionModalProps {
   open: boolean;
   onClose: () => void;
   sources: JulesSource[];
   apiKey: string;
+  githubToken?: string;
   onSessionCreated: (sessionId: string) => void;
   onAddRepo?: () => void;
+}
+
+/** Represents a unified repo item for the dropdown */
+interface RepoItem {
+  /** Unique key for rendering */
+  key: string;
+  /** Display name e.g. "owner/repo" */
+  displayName: string;
+  /** Branch to use */
+  branch: string;
+  /** Source name for Jules API (e.g. "sources/github/owner/repo") */
+  sourceName: string;
+  /** Whether this is already a registered Jules source */
+  isRegistered: boolean;
+  /** Whether it's a private repo */
+  isPrivate?: boolean;
+  /** Stars count */
+  stars?: number;
+  /** Description */
+  description?: string;
 }
 
 export function GlassNewMissionModal({
@@ -30,6 +61,7 @@ export function GlassNewMissionModal({
   onClose,
   sources,
   apiKey,
+  githubToken,
   onSessionCreated,
   onAddRepo,
 }: GlassNewMissionModalProps) {
@@ -47,6 +79,32 @@ export function GlassNewMissionModal({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  // GitHub repos state
+  const [githubRepos, setGithubRepos] = useState<GitHubRepoInfo[]>([]);
+  const [isLoadingGithub, setIsLoadingGithub] = useState(false);
+  const [githubError, setGithubError] = useState<string | null>(null);
+
+  // Fetch GitHub repos when dropdown opens
+  const fetchGithubRepos = useCallback(async () => {
+    if (!githubToken || githubRepos.length > 0) return;
+    setIsLoadingGithub(true);
+    setGithubError(null);
+    try {
+      const repos = await getGitHubRepos(githubToken);
+      setGithubRepos(repos);
+    } catch (err) {
+      setGithubError(err instanceof Error ? err.message : "Failed to load GitHub repos");
+    } finally {
+      setIsLoadingGithub(false);
+    }
+  }, [githubToken, githubRepos.length]);
+
+  useEffect(() => {
+    if (dropdownOpen && githubToken) {
+      fetchGithubRepos();
+    }
+  }, [dropdownOpen, githubToken, fetchGithubRepos]);
+
   // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -63,15 +121,71 @@ export function GlassNewMissionModal({
 
   if (!open) return null;
 
-  const filteredSources = sources.filter((s) => {
-    const name = getSourceDisplayName(s).toLowerCase();
+  // Build a set of registered source repo names for matching
+  const registeredRepoNames = new Set(
+    sources.map((s) => getSourceDisplayName(s).toLowerCase())
+  );
+
+  // Build unified repo items list
+  const buildRepoItems = (): RepoItem[] => {
+    const items: RepoItem[] = [];
+
+    // Add registered Jules sources first
+    for (const source of sources) {
+      const displayName = getSourceDisplayName(source);
+      items.push({
+        key: source.name,
+        displayName,
+        branch: getSourceBranch(source),
+        sourceName: source.name,
+        isRegistered: true,
+        isPrivate: source.githubRepo?.isPrivate,
+      });
+    }
+
+    // Add GitHub repos that aren't already registered
+    for (const repo of githubRepos) {
+      const displayName = repo.full_name || `${repo.name}`;
+      if (!registeredRepoNames.has(displayName.toLowerCase())) {
+        // Construct Jules source name from GitHub repo
+        const parts = displayName.split("/");
+        const owner = parts.length > 1 ? parts[0] : "";
+        const repoName = parts.length > 1 ? parts[1] : parts[0];
+        const sourceName = owner
+          ? `sources/github/${owner}/${repoName}`
+          : `sources/github/${repoName}`;
+
+        items.push({
+          key: sourceName,
+          displayName,
+          branch: "main",
+          sourceName,
+          isRegistered: false,
+          isPrivate: repo.private,
+          stars: repo.description ? undefined : undefined, // GitHubRepoInfo doesn't have stars but we'll use description
+          description: repo.description,
+        });
+      }
+    }
+
+    return items;
+  };
+
+  const allRepoItems = buildRepoItems();
+
+  const filteredItems = allRepoItems.filter((item) => {
+    const name = item.displayName.toLowerCase();
     return !searchFilter || name.includes(searchFilter.toLowerCase());
   });
 
-  const handleSelectSource = (source: JulesSource) => {
-    setSelectedSource(source.name);
-    setSelectedSourceDisplay(getSourceDisplayName(source));
-    setBranch(getSourceBranch(source));
+  // Separate registered and unregistered for grouped display
+  const registeredItems = filteredItems.filter((i) => i.isRegistered);
+  const unregisteredItems = filteredItems.filter((i) => !i.isRegistered);
+
+  const handleSelectSource = (item: RepoItem) => {
+    setSelectedSource(item.sourceName);
+    setSelectedSourceDisplay(item.displayName);
+    setBranch(item.branch);
     setDropdownOpen(false);
     setSearchFilter("");
   };
@@ -84,6 +198,7 @@ export function GlassNewMissionModal({
     setError(null);
 
     try {
+      const { createSession } = await import("@/lib/jules-client");
       const session = await createSession(apiKey, {
         prompt: prompt.trim(),
         title: title.trim() || undefined,
@@ -109,6 +224,40 @@ export function GlassNewMissionModal({
     setBranch("main"); setAutomationMode("none"); setRequireApproval(true);
     setError(null); setDropdownOpen(false); setSearchFilter("");
     onClose();
+  };
+
+  const renderRepoItem = (item: RepoItem) => {
+    const isSelected = selectedSource === item.sourceName;
+    return (
+      <button
+        key={item.key}
+        type="button"
+        onClick={() => handleSelectSource(item)}
+        className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/5 transition-all ${
+          isSelected ? "bg-[#00E5FF]/10 text-[#00E5FF]" : "text-[#E0F7FA]"
+        }`}
+      >
+        <div className={`w-8 h-8 flex items-center justify-center rounded-lg shrink-0 ${
+          isSelected ? "bg-[#00E5FF]/20 text-[#00E5FF]" : item.isRegistered ? "bg-[#00E676]/10 text-[#00E676]" : "bg-white/5 text-[#547B88]"
+        }`}>
+          {item.isPrivate ? <Lock size={14} /> : <GitBranch size={14} />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-mono truncate">{item.displayName}</p>
+            {item.isRegistered && (
+              <span className="text-[8px] font-mono font-bold uppercase px-1.5 py-0.5 rounded bg-[#00E676]/10 text-[#00E676] border border-[#00E676]/20 shrink-0">
+                Connected
+              </span>
+            )}
+          </div>
+          <p className="text-[10px] text-[#547B88] font-mono truncate">
+            {item.isRegistered ? `Branch: ${item.branch}` : item.description || `Branch: ${item.branch}`}
+          </p>
+        </div>
+        {isSelected && <Check size={16} className="text-[#00E5FF] shrink-0" />}
+      </button>
+    );
   };
 
   return (
@@ -158,10 +307,10 @@ export function GlassNewMissionModal({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Context Target - Custom Dropdown */}
-            <div className="space-y-2">
+            {/* Context Target - Enhanced Dropdown with GitHub repos */}
+            <div className="space-y-2 sm:col-span-2">
               <label className="text-[10px] font-mono text-[#547B88] uppercase font-bold tracking-[0.2em] ml-1 flex items-center gap-1.5">
-                <GitBranch size={12} /> Context Target
+                <GitBranch size={12} /> Context Target *
               </label>
               <div className="relative" ref={dropdownRef}>
                 <button
@@ -171,7 +320,7 @@ export function GlassNewMissionModal({
                   className="w-full bg-white/5 border border-white/10 px-5 py-4 text-sm rounded-2xl text-left hover:bg-white/10 transition-all flex items-center justify-between gap-2 disabled:opacity-50"
                 >
                   <span className={selectedSourceDisplay ? "text-[#E0F7FA] font-mono" : "text-[#1A3540]"}>
-                    {selectedSourceDisplay || (sources.length === 0 ? "No sources available" : "Select repository...")}
+                    {selectedSourceDisplay || "Select repository..."}
                   </span>
                   <ChevronDown size={16} className={`text-[#547B88] shrink-0 transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
                 </button>
@@ -194,14 +343,28 @@ export function GlassNewMissionModal({
                       </div>
                     </div>
 
-                    {/* Sources List */}
-                    <div className="max-h-60 overflow-y-auto">
-                      {filteredSources.length === 0 ? (
+                    {/* Repo List */}
+                    <div className="max-h-80 overflow-y-auto">
+                      {isLoadingGithub && githubRepos.length === 0 ? (
+                        <div className="p-6 text-center">
+                          <Loader2 size={24} className="text-[#00E5FF] mx-auto mb-2 animate-spin" />
+                          <p className="text-xs text-[#547B88]">Loading your GitHub repositories...</p>
+                        </div>
+                      ) : githubError && sources.length === 0 ? (
+                        <div className="p-6 text-center">
+                          <Github size={24} className="text-[#FF2A5F] opacity-30 mx-auto mb-2" />
+                          <p className="text-xs text-[#FF2A5F]">{githubError}</p>
+                          <p className="text-[10px] text-[#547B88] mt-1">Add a GitHub token in the Agents tab to see your repos</p>
+                        </div>
+                      ) : filteredItems.length === 0 ? (
                         <div className="p-6 text-center">
                           <Github size={24} className="text-[#547B88] opacity-30 mx-auto mb-2" />
                           <p className="text-xs text-[#547B88]">
-                            {sources.length === 0 ? "No repositories connected" : "No matching repositories"}
+                            {searchFilter ? "No matching repositories" : "No repositories found"}
                           </p>
+                          {!githubToken && (
+                            <p className="text-[10px] text-[#547B88] mt-1">Add a GitHub token in the Agents tab to see your repos</p>
+                          )}
                           {onAddRepo && (
                             <button
                               onClick={() => { setDropdownOpen(false); onAddRepo(); }}
@@ -212,31 +375,34 @@ export function GlassNewMissionModal({
                           )}
                         </div>
                       ) : (
-                        filteredSources.map((source) => {
-                          const displayName = getSourceDisplayName(source);
-                          const isSelected = selectedSource === source.name;
-                          return (
-                            <button
-                              key={source.name}
-                              type="button"
-                              onClick={() => handleSelectSource(source)}
-                              className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/5 transition-all ${
-                                isSelected ? "bg-[#00E5FF]/10 text-[#00E5FF]" : "text-[#E0F7FA]"
-                              }`}
-                            >
-                              <div className={`w-8 h-8 flex items-center justify-center rounded-lg shrink-0 ${
-                                isSelected ? "bg-[#00E5FF]/20 text-[#00E5FF]" : "bg-white/5 text-[#547B88]"
-                              }`}>
-                                <GitBranch size={14} />
+                        <>
+                          {/* Registered Sources Section */}
+                          {registeredItems.length > 0 && (
+                            <>
+                              <div className="px-4 pt-3 pb-1">
+                                <p className="text-[9px] font-mono text-[#00E676] uppercase tracking-[0.15em] font-bold flex items-center gap-1">
+                                  <Star size={10} /> Connected Repositories
+                                </p>
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-mono truncate">{displayName}</p>
-                                <p className="text-[10px] text-[#547B88] font-mono truncate">{getSourceBranch(source)}</p>
+                              {registeredItems.map(renderRepoItem)}
+                            </>
+                          )}
+
+                          {/* GitHub Repos Section */}
+                          {unregisteredItems.length > 0 && (
+                            <>
+                              {registeredItems.length > 0 && (
+                                <div className="mx-4 my-2 border-t border-white/5" />
+                              )}
+                              <div className="px-4 pt-2 pb-1">
+                                <p className="text-[9px] font-mono text-[#00E5FF] uppercase tracking-[0.15em] font-bold flex items-center gap-1">
+                                  <Github size={10} /> Your GitHub Repositories
+                                </p>
                               </div>
-                              {isSelected && <Check size={16} className="text-[#00E5FF] shrink-0" />}
-                            </button>
-                          );
-                        })
+                              {unregisteredItems.map(renderRepoItem)}
+                            </>
+                          )}
+                        </>
                       )}
                     </div>
 

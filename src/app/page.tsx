@@ -398,7 +398,9 @@ export default function Home() {
           onClose={() => setIsNewMissionOpen(false)}
           sources={sources}
           apiKey={apiKey!}
+          githubToken={githubToken || undefined}
           onSessionCreated={handleSessionCreated}
+          onAddRepo={() => setIsAddRepoOpen(true)}
         />
       )}
       {isAddRepoOpen && (
