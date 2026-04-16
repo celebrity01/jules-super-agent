@@ -61,12 +61,12 @@ export function ApiKeySetup({ onConnect }: ApiKeySetupProps) {
 
           {/* Input */}
           <div className="space-y-3 mb-6">
-            <Label className="text-[10px] font-mono text-[#547B88] uppercase font-bold tracking-[0.2em]">API Key</Label>
+            <Label className="text-[10px] font-mono text-[#547B88] uppercase font-bold tracking-[0.2em]">Google OAuth Access Token</Label>
             <div className="relative">
               <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#547B88]" />
               <Input
                 type="password"
-                placeholder="Enter your Jules API key"
+                placeholder="Paste your Google OAuth access token"
                 value={apiKey}
                 onChange={(e) => { setApiKey(e.target.value); setError(null); }}
                 onKeyDown={handleKeyDown}
@@ -93,12 +93,13 @@ export function ApiKeySetup({ onConnect }: ApiKeySetupProps) {
 
           {/* Help */}
           <div className="mt-6 glass-surface p-4 rounded-2xl space-y-3">
-            <p className="text-[10px] font-mono text-[#547B88] uppercase font-bold tracking-[0.2em]">How to get your API key</p>
+            <p className="text-[10px] font-mono text-[#547B88] uppercase font-bold tracking-[0.2em]">How to get your OAuth token</p>
             <ol className="text-xs text-[#547B88] space-y-1.5 list-decimal list-inside">
-              <li>Visit <span className="text-[#E0F7FA] font-medium">jules.google</span></li>
-              <li>Go to Settings in your account</li>
-              <li>Generate a new API key</li>
-              <li>Copy and paste it above</li>
+              <li>Visit <span className="text-[#E0F7FA] font-medium">Google Cloud Console</span></li>
+              <li>Create OAuth 2.0 credentials with Jules API scope</li>
+              <li>Authorize and get your access token</li>
+              <li>Or use <span className="text-[#E0F7FA] font-medium">gcloud auth print-access-token</span></li>
+              <li>Copy and paste the token above</li>
             </ol>
             <a href="https://jules.google" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-[#00E5FF] hover:text-[#E0F7FA] transition-colors mt-1">
               Open Jules <ExternalLink className="h-3 w-3" />
