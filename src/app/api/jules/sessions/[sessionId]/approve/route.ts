@@ -13,8 +13,10 @@ export async function POST(
 
   try {
     const { sessionId } = await params;
+    // The sessionId may be "sessions/xxx" or just "xxx"
+    const name = sessionId.includes("/") ? sessionId : `sessions/${sessionId}`;
     const res = await fetch(
-      `${JULES_BASE}/sessions/${sessionId}:approvePlan`,
+      `${JULES_BASE}/${name}:approvePlan`,
       {
         method: "POST",
         headers: {
@@ -23,8 +25,17 @@ export async function POST(
         },
       }
     );
-    const data = await res.json();
-    return NextResponse.json(data, { status: res.status });
+    // approvePlan returns empty body on success
+    const text = await res.text();
+    if (!text) {
+      return NextResponse.json({ success: true }, { status: res.status });
+    }
+    try {
+      const data = JSON.parse(text);
+      return NextResponse.json(data, { status: res.status });
+    } catch {
+      return NextResponse.json({ success: true }, { status: res.status });
+    }
   } catch (error) {
     console.error("Failed to approve plan:", error);
     return NextResponse.json(

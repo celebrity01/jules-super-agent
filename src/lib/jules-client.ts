@@ -220,17 +220,6 @@ export async function listSources(apiKey: string): Promise<{ sources?: JulesSour
   return res.json();
 }
 
-export async function getSource(apiKey: string, sourceName: string): Promise<JulesSource> {
-  const res = await fetch(`/api/jules/sources/${encodeURIComponent(sourceName)}`, {
-    headers: headers(apiKey),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: "Request failed" }));
-    throw new Error(err.error || `Failed to fetch source (${res.status})`);
-  }
-  return res.json();
-}
-
 export async function listSessions(
   apiKey: string,
   pageSize = 10,
@@ -271,13 +260,24 @@ export async function createSession(
   return res.json();
 }
 
+/**
+ * Extract the raw ID from a session name.
+ * "sessions/abc123" -> "abc123"
+ * "abc123" -> "abc123"
+ */
+function extractId(sessionId: string): string {
+  if (sessionId.includes("/")) {
+    return sessionId.split("/").pop() || sessionId;
+  }
+  return sessionId;
+}
+
 export async function getSession(
   apiKey: string,
   sessionId: string
 ): Promise<JulesSession> {
-  // Use full name format if not already
-  const name = sessionId.includes("/") ? sessionId : `sessions/${sessionId}`;
-  const res = await fetch(`/api/jules/sessions/${encodeURIComponent(name)}`, {
+  const id = extractId(sessionId);
+  const res = await fetch(`/api/jules/sessions/${id}`, {
     headers: headers(apiKey),
   });
   if (!res.ok) {
@@ -291,9 +291,8 @@ export async function approvePlan(
   apiKey: string,
   sessionId: string
 ): Promise<unknown> {
-  // Use full name format if not already
-  const name = sessionId.includes("/") ? sessionId : `sessions/${sessionId}`;
-  const res = await fetch(`/api/jules/sessions/${encodeURIComponent(name)}/approve`, {
+  const id = extractId(sessionId);
+  const res = await fetch(`/api/jules/sessions/${id}/approve`, {
     method: "POST",
     headers: headers(apiKey),
   });
@@ -312,13 +311,12 @@ export async function listActivities(
   pageSize = 50,
   pageToken?: string
 ): Promise<{ activities?: JulesActivity[]; nextPageToken?: string }> {
-  // Use full name format if not already
-  const name = sessionId.includes("/") ? sessionId : `sessions/${sessionId}`;
+  const id = extractId(sessionId);
   const params = new URLSearchParams({ pageSize: String(pageSize) });
   if (pageToken) params.set("pageToken", pageToken);
 
   const res = await fetch(
-    `/api/jules/sessions/${encodeURIComponent(name)}/activities?${params}`,
+    `/api/jules/sessions/${id}/activities?${params}`,
     {
       headers: headers(apiKey),
     }
@@ -337,9 +335,8 @@ export async function sendMessage(
   sessionId: string,
   prompt: string
 ): Promise<unknown> {
-  // Use full name format if not already
-  const name = sessionId.includes("/") ? sessionId : `sessions/${sessionId}`;
-  const res = await fetch(`/api/jules/sessions/${encodeURIComponent(name)}/message`, {
+  const id = extractId(sessionId);
+  const res = await fetch(`/api/jules/sessions/${id}/message`, {
     method: "POST",
     headers: headers(apiKey),
     body: JSON.stringify({ prompt }),

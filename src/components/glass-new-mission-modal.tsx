@@ -10,7 +10,7 @@ import {
   Loader2,
   GitBranch,
 } from "lucide-react";
-import { JulesSource, createSession, getSourceDisplayName } from "@/lib/jules-client";
+import { JulesSource, createSession, getSourceDisplayName, AutomationMode } from "@/lib/jules-client";
 import {
   Select,
   SelectContent,
@@ -38,7 +38,7 @@ export function GlassNewMissionModal({
   const [prompt, setPrompt] = useState("");
   const [selectedSource, setSelectedSource] = useState("");
   const [branch, setBranch] = useState("main");
-  const [automationMode, setAutomationMode] = useState<string>("none");
+  const [automationMode, setAutomationMode] = useState<AutomationMode | "none">("none");
   const [requireApproval, setRequireApproval] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +60,7 @@ export function GlassNewMissionModal({
           source: selectedSource,
           githubRepoContext: { startingBranch: branch.trim() || "main" },
         },
-        automationMode: automationMode === "none" ? undefined : automationMode,
+        automationMode: automationMode === "none" ? undefined : automationMode as AutomationMode,
         requirePlanApproval: requireApproval,
       });
       const sessionId = session.name.split("/").pop() || session.name;
