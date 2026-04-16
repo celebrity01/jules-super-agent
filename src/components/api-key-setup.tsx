@@ -11,20 +11,33 @@ interface ApiKeySetupProps {
   onConnect: (apiKey: string) => void;
 }
 
+function detectKeyType(key: string): "api-key" | "oauth" {
+  return key.startsWith("ya29.") ? "oauth" : "api-key";
+}
+
 export function ApiKeySetup({ onConnect }: ApiKeySetupProps) {
   const [apiKey, setApiKey] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const keyType = apiKey.trim() ? detectKeyType(apiKey.trim()) : null;
+
   const handleConnect = async () => {
-    if (!apiKey.trim()) { setError("Please enter your Google OAuth access token"); return; }
+    if (!apiKey.trim()) { setError("Please enter your Jules API key or Google OAuth token"); return; }
     setIsLoading(true);
     setError(null);
     try {
       await listSources(apiKey.trim());
       onConnect(apiKey.trim());
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Invalid OAuth token — make sure it has the Jules API scope");
+      const type = detectKeyType(apiKey.trim());
+      setError(
+        err instanceof Error
+          ? err.message
+          : type === "oauth"
+            ? "Invalid OAuth token — make sure it has the Jules API scope and hasn't expired"
+            : "Invalid API key — get one from jules.google Settings"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -61,12 +74,23 @@ export function ApiKeySetup({ onConnect }: ApiKeySetupProps) {
 
           {/* Input */}
           <div className="space-y-3 mb-6">
-            <Label className="text-[10px] font-mono text-[#547B88] uppercase font-bold tracking-[0.2em]">Google OAuth Access Token</Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-[10px] font-mono text-[#547B88] uppercase font-bold tracking-[0.2em]">Jules API Key</Label>
+              {keyType && (
+                <span className={`text-[9px] font-mono px-2 py-0.5 rounded-full border ${
+                  keyType === "oauth"
+                    ? "border-[#B388FF]/30 text-[#B388FF] bg-[#B388FF]/10"
+                    : "border-[#00E5FF]/30 text-[#00E5FF] bg-[#00E5FF]/10"
+                }`}>
+                  {keyType === "oauth" ? "OAuth Token" : "API Key"}
+                </span>
+              )}
+            </div>
             <div className="relative">
               <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#547B88]" />
               <Input
                 type="password"
-                placeholder="Paste your Google OAuth access token"
+                placeholder="Enter your Jules API key or OAuth token"
                 value={apiKey}
                 onChange={(e) => { setApiKey(e.target.value); setError(null); }}
                 onKeyDown={handleKeyDown}
@@ -93,14 +117,20 @@ export function ApiKeySetup({ onConnect }: ApiKeySetupProps) {
 
           {/* Help */}
           <div className="mt-6 glass-surface p-4 rounded-2xl space-y-3">
-            <p className="text-[10px] font-mono text-[#547B88] uppercase font-bold tracking-[0.2em]">How to get your OAuth token</p>
+            <p className="text-[10px] font-mono text-[#547B88] uppercase font-bold tracking-[0.2em]">How to get your API key</p>
             <ol className="text-xs text-[#547B88] space-y-1.5 list-decimal list-inside">
-              <li>Visit <span className="text-[#E0F7FA] font-medium">Google Cloud Console</span></li>
-              <li>Create OAuth 2.0 credentials with Jules API scope</li>
-              <li>Authorize and get your access token</li>
-              <li>Or use <span className="text-[#E0F7FA] font-medium">gcloud auth print-access-token</span></li>
-              <li>Copy and paste the token above</li>
+              <li>Visit <span className="text-[#E0F7FA] font-medium">jules.google</span></li>
+              <li>Go to <span className="text-[#E0F7FA] font-medium">Settings</span> in your account</li>
+              <li>Generate a new <span className="text-[#E0F7FA] font-medium">API key</span></li>
+              <li>Copy and paste it above</li>
             </ol>
+            <div className="border-t border-white/5 pt-3 mt-3">
+              <p className="text-[10px] font-mono text-[#547B88] uppercase font-bold tracking-[0.2em] mb-2">Advanced: OAuth token</p>
+              <p className="text-xs text-[#547B88] leading-relaxed">
+                You can also use a Google OAuth access token (starts with <span className="text-[#B388FF] font-mono">ya29.</span>) for full API access.
+                Use <span className="text-[#E0F7FA] font-medium">gcloud auth print-access-token</span> or create OAuth 2.0 credentials in Google Cloud Console.
+              </p>
+            </div>
             <a href="https://jules.google" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-[#00E5FF] hover:text-[#E0F7FA] transition-colors mt-1">
               Open Jules <ExternalLink className="h-3 w-3" />
             </a>

@@ -2,13 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 
 const JULES_BASE = "https://jules.googleapis.com/v1alpha";
 
+function buildAuthHeaders(key: string): Record<string, string> {
+  if (key.startsWith("ya29.")) {
+    return { "Authorization": `Bearer ${key}` };
+  }
+  return { "X-Goog-Api-Key": key };
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ sessionId: string }> }
 ) {
   const apiKey = req.headers.get("X-Jules-Api-Key");
   if (!apiKey) {
-    return NextResponse.json({ error: "OAuth token is required" }, { status: 401 });
+    return NextResponse.json({ error: "API key or OAuth token is required" }, { status: 401 });
   }
 
   try {
@@ -19,7 +26,7 @@ export async function POST(
       {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${apiKey}`,
+          ...buildAuthHeaders(apiKey),
           "Content-Type": "application/json",
         },
       }

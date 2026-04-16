@@ -1,6 +1,11 @@
 // Client-side API helper for Jules API
 // Based on official Google Jules API v1alpha documentation
 // https://developers.google.com/jules/api/reference/rest
+//
+// Supports both authentication methods:
+// - API key (from jules.google Settings) → sent as X-Goog-Api-Key
+// - Google OAuth access token (starts with ya29.) → sent as Authorization: Bearer
+// The server routes auto-detect which method to use based on the key format.
 
 // ===== Source types (real API) =====
 
