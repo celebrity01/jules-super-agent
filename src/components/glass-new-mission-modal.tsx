@@ -1,23 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Rocket,
   X,
-  ChevronDown,
   Sliders,
   GitPullRequest,
   Loader2,
   GitBranch,
+  Check,
+  ChevronDown,
+  FolderPlus,
+  Search,
+  Github,
 } from "lucide-react";
-import { JulesSource, createSession, getSourceDisplayName, AutomationMode } from "@/lib/jules-client";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { JulesSource, createSession, getSourceDisplayName, getSourceBranch, AutomationMode } from "@/lib/jules-client";
 
 interface GlassNewMissionModalProps {
   open: boolean;
@@ -25,6 +22,7 @@ interface GlassNewMissionModalProps {
   sources: JulesSource[];
   apiKey: string;
   onSessionCreated: (sessionId: string) => void;
+  onAddRepo?: () => void;
 }
 
 export function GlassNewMissionModal({
@@ -33,17 +31,50 @@ export function GlassNewMissionModal({
   sources,
   apiKey,
   onSessionCreated,
+  onAddRepo,
 }: GlassNewMissionModalProps) {
   const [title, setTitle] = useState("");
   const [prompt, setPrompt] = useState("");
   const [selectedSource, setSelectedSource] = useState("");
+  const [selectedSourceDisplay, setSelectedSourceDisplay] = useState("");
   const [branch, setBranch] = useState("main");
   const [automationMode, setAutomationMode] = useState<AutomationMode | "none">("none");
   const [requireApproval, setRequireApproval] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [searchFilter, setSearchFilter] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    if (dropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      if (searchInputRef.current) searchInputRef.current.focus();
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [dropdownOpen]);
 
   if (!open) return null;
+
+  const filteredSources = sources.filter((s) => {
+    const name = getSourceDisplayName(s).toLowerCase();
+    return !searchFilter || name.includes(searchFilter.toLowerCase());
+  });
+
+  const handleSelectSource = (source: JulesSource) => {
+    setSelectedSource(source.name);
+    setSelectedSourceDisplay(getSourceDisplayName(source));
+    setBranch(getSourceBranch(source));
+    setDropdownOpen(false);
+    setSearchFilter("");
+  };
 
   const handleCreate = async () => {
     if (!prompt.trim()) { setError("Objective is required"); return; }
@@ -74,8 +105,9 @@ export function GlassNewMissionModal({
   };
 
   const handleClose = () => {
-    setTitle(""); setPrompt(""); setSelectedSource(""); setBranch("main");
-    setAutomationMode("none"); setRequireApproval(true); setError(null);
+    setTitle(""); setPrompt(""); setSelectedSource(""); setSelectedSourceDisplay("");
+    setBranch("main"); setAutomationMode("none"); setRequireApproval(true);
+    setError(null); setDropdownOpen(false); setSearchFilter("");
     onClose();
   };
 
@@ -126,21 +158,104 @@ export function GlassNewMissionModal({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Context Target - Custom Dropdown */}
             <div className="space-y-2">
-              <label className="text-[10px] font-mono text-[#547B88] uppercase font-bold tracking-[0.2em] ml-1">Context Target</label>
-              <Select value={selectedSource} onValueChange={setSelectedSource} disabled={isLoading || sources.length === 0}>
-                <SelectTrigger className="w-full bg-white/5 border border-white/10 px-5 py-4 text-sm rounded-2xl text-[#E0F7FA] h-auto hover:bg-white/10 transition-all">
-                  <SelectValue placeholder={sources.length === 0 ? "No sources" : "Select repository"} />
-                </SelectTrigger>
-                <SelectContent className="bg-[#0a1419] border-white/10">
-                  {sources.map((source) => (
-                    <SelectItem key={source.name} value={source.name} className="text-[#E0F7FA] focus:bg-white/5 focus:text-[#E0F7FA]">
-                      <span className="font-mono">{getSourceDisplayName(source)}</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <label className="text-[10px] font-mono text-[#547B88] uppercase font-bold tracking-[0.2em] ml-1 flex items-center gap-1.5">
+                <GitBranch size={12} /> Context Target
+              </label>
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  disabled={isLoading}
+                  className="w-full bg-white/5 border border-white/10 px-5 py-4 text-sm rounded-2xl text-left hover:bg-white/10 transition-all flex items-center justify-between gap-2 disabled:opacity-50"
+                >
+                  <span className={selectedSourceDisplay ? "text-[#E0F7FA] font-mono" : "text-[#1A3540]"}>
+                    {selectedSourceDisplay || (sources.length === 0 ? "No sources available" : "Select repository...")}
+                  </span>
+                  <ChevronDown size={16} className={`text-[#547B88] shrink-0 transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
+                </button>
+
+                {/* Dropdown Panel */}
+                {dropdownOpen && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-[#0a1419] border border-white/10 rounded-2xl shadow-2xl z-[200] overflow-hidden animate-slide-up">
+                    {/* Search */}
+                    <div className="p-3 border-b border-white/5">
+                      <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2">
+                        <Search size={14} className="text-[#547B88] shrink-0" />
+                        <input
+                          ref={searchInputRef}
+                          type="text"
+                          placeholder="Search repositories..."
+                          value={searchFilter}
+                          onChange={(e) => setSearchFilter(e.target.value)}
+                          className="bg-transparent border-none outline-none w-full text-xs text-[#E0F7FA] placeholder-[#1A3540] font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Sources List */}
+                    <div className="max-h-60 overflow-y-auto">
+                      {filteredSources.length === 0 ? (
+                        <div className="p-6 text-center">
+                          <Github size={24} className="text-[#547B88] opacity-30 mx-auto mb-2" />
+                          <p className="text-xs text-[#547B88]">
+                            {sources.length === 0 ? "No repositories connected" : "No matching repositories"}
+                          </p>
+                          {onAddRepo && (
+                            <button
+                              onClick={() => { setDropdownOpen(false); onAddRepo(); }}
+                              className="mt-3 text-[#00E5FF] text-xs font-bold hover:underline flex items-center gap-1 mx-auto"
+                            >
+                              <FolderPlus size={12} /> Add Repository
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        filteredSources.map((source) => {
+                          const displayName = getSourceDisplayName(source);
+                          const isSelected = selectedSource === source.name;
+                          return (
+                            <button
+                              key={source.name}
+                              type="button"
+                              onClick={() => handleSelectSource(source)}
+                              className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/5 transition-all ${
+                                isSelected ? "bg-[#00E5FF]/10 text-[#00E5FF]" : "text-[#E0F7FA]"
+                              }`}
+                            >
+                              <div className={`w-8 h-8 flex items-center justify-center rounded-lg shrink-0 ${
+                                isSelected ? "bg-[#00E5FF]/20 text-[#00E5FF]" : "bg-white/5 text-[#547B88]"
+                              }`}>
+                                <GitBranch size={14} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-mono truncate">{displayName}</p>
+                                <p className="text-[10px] text-[#547B88] font-mono truncate">{getSourceBranch(source)}</p>
+                              </div>
+                              {isSelected && <Check size={16} className="text-[#00E5FF] shrink-0" />}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    {/* Add Repo Footer */}
+                    {onAddRepo && (
+                      <div className="p-3 border-t border-white/5">
+                        <button
+                          onClick={() => { setDropdownOpen(false); onAddRepo(); }}
+                          className="w-full flex items-center justify-center gap-2 py-2 text-[#00E5FF] text-xs font-bold hover:bg-white/5 rounded-xl transition-all"
+                        >
+                          <FolderPlus size={14} /> Add New Repository
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
+
             <div className="space-y-2">
               <label className="text-[10px] font-mono text-[#547B88] uppercase font-bold tracking-[0.2em] ml-1">Branch Vector</label>
               <input
