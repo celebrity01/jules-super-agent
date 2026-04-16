@@ -46,7 +46,7 @@ export function GlassAddRepoModal({
     try {
       const res = await fetch("/api/github/create-repo", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-github-token": githubToken },
+        headers: { "Content-Type": "application/json", "X-GitHub-Token": githubToken },
         body: JSON.stringify({
           name: repoName.trim(),
           description: description.trim() || undefined,

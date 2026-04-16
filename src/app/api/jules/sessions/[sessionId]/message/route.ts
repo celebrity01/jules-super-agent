@@ -8,20 +8,19 @@ export async function POST(
 ) {
   const apiKey = req.headers.get("X-Jules-Api-Key");
   if (!apiKey) {
-    return NextResponse.json({ error: "API key is required" }, { status: 401 });
+    return NextResponse.json({ error: "OAuth token is required" }, { status: 401 });
   }
 
   try {
     const { sessionId } = await params;
-    // The sessionId may be "sessions/xxx" or just "xxx"
     const name = sessionId.includes("/") ? sessionId : `sessions/${sessionId}`;
     const body = await req.json();
     const res = await fetch(
-      `${JULES_BASE}/${name}:sendMessage`,
+      `${JULES_BASE}/${name}:addMessage`,
       {
         method: "POST",
         headers: {
-          "X-Goog-Api-Key": apiKey,
+          "Authorization": `Bearer ${apiKey}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
