@@ -93,6 +93,18 @@ interface GlassDeployNotificationProps {
   githubToken?: string;
 }
 
+/** Sanitize a token/header value to only contain ISO-8859-1 compatible characters.
+ *  Browsers reject fetch headers with non-Latin-1 code points.
+ */
+function sanitizeHeaderValue(value: string): string {
+  // Remove any character outside the ISO-8859-1 range (0x00–0xFF)
+  // Also strip common invisible Unicode chars (zero-width spaces, BOM, etc.)
+  return value
+    .replace(/[\u200B-\u200D\uFEFF\u00AD]/g, "") // zero-width chars, BOM, soft hyphen
+    .replace(/[^\x00-\xFF]/g, "") // remove anything outside Latin-1
+    .trim();
+}
+
 export function GlassDeployNotification({
   open,
   onClose,
@@ -130,8 +142,13 @@ export function GlassDeployNotification({
     const key = PROVIDERS[selectedProvider].tokenKey;
     const saved = localStorage.getItem(key);
     if (saved) {
-      setSavedToken(saved);
-      setApiKey(saved);
+      const clean = sanitizeHeaderValue(saved);
+      if (clean !== saved) {
+        // Re-save the sanitized version
+        localStorage.setItem(key, clean);
+      }
+      setSavedToken(clean);
+      setApiKey(clean);
     } else {
       setSavedToken(null);
       setApiKey("");
@@ -145,10 +162,12 @@ export function GlassDeployNotification({
       const key = PROVIDERS[preselectedProvider].tokenKey;
       const saved = localStorage.getItem(key);
       if (saved) {
-        setSavedToken(saved);
-        setApiKey(saved);
+        const clean = sanitizeHeaderValue(saved);
+        if (clean !== saved) localStorage.setItem(key, clean);
+        setSavedToken(clean);
+        setApiKey(clean);
         setStep("select-item");
-        fetchItems(preselectedProvider, saved);
+        fetchItems(preselectedProvider, clean);
       } else {
         setSavedToken(null);
         setApiKey("");
@@ -202,7 +221,7 @@ export function GlassDeployNotification({
         ? `/api/github/repos?search=${encodeURIComponent(searchQuery)}`
         : "/api/github/repos";
       const res = await fetch(url, {
-        headers: { "X-GitHub-Token": githubToken },
+        headers: { "X-GitHub-Token": sanitizeHeaderValue(githubToken) },
       });
       const text = await res.text();
       let data;
@@ -237,6 +256,9 @@ export function GlassDeployNotification({
     setItems([]);
     setSelectedItem(null);
 
+    // Sanitize token to prevent non-ISO-8859-1 header errors
+    const cleanToken = sanitizeHeaderValue(token);
+
     // Helper: safely parse JSON from a fetch Response (body can only be read once)
     const safeParse = async (res: Response) => {
       const text = await res.text();
@@ -251,7 +273,7 @@ export function GlassDeployNotification({
 
       if (provider === "vercel") {
         const { ok, status, data, text: rawText } = await safeParse(await fetch("/api/vercel/projects", {
-          headers: { [headerName]: token },
+          headers: { [headerName]: cleanToken },
         }));
         if (!ok) {
           const err = data || { error: `Failed (${status})` };
@@ -265,7 +287,7 @@ export function GlassDeployNotification({
         }));
       } else if (provider === "netlify") {
         const { ok, status, data, text: rawText } = await safeParse(await fetch("/api/netlify/sites", {
-          headers: { [headerName]: token },
+          headers: { [headerName]: cleanToken },
         }));
         if (!ok) {
           const err = data || { error: `Failed (${status})` };
@@ -279,7 +301,7 @@ export function GlassDeployNotification({
         }));
       } else if (provider === "render") {
         const { ok, status, data, text: rawText } = await safeParse(await fetch("/api/render/services", {
-          headers: { [headerName]: token },
+          headers: { [headerName]: cleanToken },
         }));
         if (!ok) {
           const err = data || { error: `Failed (${status})` };
@@ -313,10 +335,12 @@ export function GlassDeployNotification({
     const key = PROVIDERS[provider].tokenKey;
     const saved = localStorage.getItem(key);
     if (saved) {
-      setSavedToken(saved);
-      setApiKey(saved);
+      const clean = sanitizeHeaderValue(saved);
+      if (clean !== saved) localStorage.setItem(key, clean);
+      setSavedToken(clean);
+      setApiKey(clean);
       setStep("select-item");
-      fetchItems(provider, saved);
+      fetchItems(provider, clean);
     } else {
       setSavedToken(null);
       setApiKey("");
@@ -327,14 +351,15 @@ export function GlassDeployNotification({
   const handleSaveApiKey = () => {
     if (!selectedProvider || !apiKey.trim()) return;
     const key = PROVIDERS[selectedProvider].tokenKey;
-    localStorage.setItem(key, apiKey.trim());
-    setSavedToken(apiKey.trim());
+    const clean = sanitizeHeaderValue(apiKey.trim());
+    localStorage.setItem(key, clean);
+    setSavedToken(clean);
 
     const providerName = PROVIDERS[selectedProvider].name;
     onSendMessage?.(`Make sure you connect ${providerName} to GitHub before deploying. This allows ${providerName} to access your repository and build from source.`);
 
     setStep("select-item");
-    fetchItems(selectedProvider, apiKey.trim());
+    fetchItems(selectedProvider, clean);
   };
 
   const handleHostItemSelect = (itemId: string) => {
@@ -358,6 +383,7 @@ export function GlassDeployNotification({
 
     try {
       const headerName = PROVIDERS[selectedProvider].tokenHeader;
+      const cleanToken = sanitizeHeaderValue(savedToken);
       let res: Response;
 
       if (selectedItemType === "github" && selectedGithubRepo) {
@@ -368,7 +394,7 @@ export function GlassDeployNotification({
           // Create a Vercel project linked to the GitHub repo
           res = await fetch("/api/vercel/projects/create", {
             method: "POST",
-            headers: { "Content-Type": "application/json", [headerName]: savedToken },
+            headers: { "Content-Type": "application/json", [headerName]: cleanToken },
             body: JSON.stringify({
               name: repo.name,
               repoOwner: repo.owner,
@@ -380,7 +406,7 @@ export function GlassDeployNotification({
           // Create a Netlify site linked to the GitHub repo
           res = await fetch("/api/netlify/sites/create", {
             method: "POST",
-            headers: { "Content-Type": "application/json", [headerName]: savedToken },
+            headers: { "Content-Type": "application/json", [headerName]: cleanToken },
             body: JSON.stringify({
               name: repo.name,
               repoOwner: repo.owner,
@@ -393,7 +419,7 @@ export function GlassDeployNotification({
           // Create a Render web service linked to the GitHub repo
           res = await fetch("/api/render/services/create", {
             method: "POST",
-            headers: { "Content-Type": "application/json", [headerName]: savedToken },
+            headers: { "Content-Type": "application/json", [headerName]: cleanToken },
             body: JSON.stringify({
               name: repo.name,
               repoOwner: repo.owner,
@@ -409,19 +435,19 @@ export function GlassDeployNotification({
         if (selectedProvider === "vercel") {
           res = await fetch("/api/vercel/deploy", {
             method: "POST",
-            headers: { "Content-Type": "application/json", [headerName]: savedToken },
+            headers: { "Content-Type": "application/json", [headerName]: cleanToken },
             body: JSON.stringify({ projectId: selectedItem }),
           });
         } else if (selectedProvider === "netlify") {
           res = await fetch("/api/netlify/deploy", {
             method: "POST",
-            headers: { "Content-Type": "application/json", [headerName]: savedToken },
+            headers: { "Content-Type": "application/json", [headerName]: cleanToken },
             body: JSON.stringify({ siteId: selectedItem, title: item?.name }),
           });
         } else {
           res = await fetch("/api/render/deploy", {
             method: "POST",
-            headers: { "Content-Type": "application/json", [headerName]: savedToken },
+            headers: { "Content-Type": "application/json", [headerName]: cleanToken },
             body: JSON.stringify({ serviceId: selectedItem, clearCache: false }),
           });
         }
