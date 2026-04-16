@@ -25,6 +25,7 @@ type ThreadsViewProps = {
   onNewMission: () => void;
   onAddRepo: () => void;
   onRefresh: () => void;
+  githubToken?: string;
 };
 
 function formatTimeAgo(dateStr: string): string {
@@ -74,6 +75,7 @@ export function GlassThreadsView({
   onNewMission,
   onAddRepo,
   onRefresh,
+  githubToken,
 }: ThreadsViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -281,6 +283,7 @@ export function GlassThreadsView({
         open={deployOpen}
         onClose={() => { setDeployOpen(false); setSelectedDeployProvider(undefined); }}
         preselectedProvider={selectedDeployProvider}
+        githubToken={githubToken}
       />
     </div>
   );

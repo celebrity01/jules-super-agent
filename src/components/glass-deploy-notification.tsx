@@ -11,6 +11,8 @@ import {
   CheckCircle2,
   ExternalLink,
   ShieldCheck,
+  Search,
+  GitBranch,
 } from "lucide-react";
 
 export type HostProvider = "vercel" | "netlify" | "render";
@@ -69,13 +71,26 @@ interface DeployItem {
   url?: string;
 }
 
+interface GitHubRepoItem {
+  id: number;
+  full_name: string;
+  name: string;
+  owner: string;
+  description?: string;
+  private: boolean;
+  html_url: string;
+  default_branch?: string;
+}
+
 type DeployStep = "select-provider" | "api-key" | "select-item" | "confirm" | "deploying" | "result";
+type ItemTab = "host-projects" | "github-repos";
 
 interface GlassDeployNotificationProps {
   open: boolean;
   onClose: () => void;
   preselectedProvider?: HostProvider;
   onSendMessage?: (message: string) => void;
+  githubToken?: string;
 }
 
 export function GlassDeployNotification({
@@ -83,6 +98,7 @@ export function GlassDeployNotification({
   onClose,
   preselectedProvider,
   onSendMessage,
+  githubToken,
 }: GlassDeployNotificationProps) {
   const [step, setStep] = useState<DeployStep>("select-provider");
   const [selectedProvider, setSelectedProvider] = useState<HostProvider | null>(null);
@@ -90,10 +106,22 @@ export function GlassDeployNotification({
   const [savedToken, setSavedToken] = useState<string | null>(null);
   const [items, setItems] = useState<DeployItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
+  const [selectedItemType, setSelectedItemType] = useState<"host" | "github">("host");
+  const [selectedGithubRepo, setSelectedGithubRepo] = useState<GitHubRepoItem | null>(null);
   const [isLoadingItems, setIsLoadingItems] = useState(false);
   const [itemsError, setItemsError] = useState<string | null>(null);
   const [isDeploying, setIsDeploying] = useState(false);
   const [deployResult, setDeployResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  // Item tab state
+  const [itemTab, setItemTab] = useState<ItemTab>("host-projects");
+
+  // GitHub repos state
+  const [githubRepos, setGithubRepos] = useState<GitHubRepoItem[]>([]);
+  const [isLoadingRepos, setIsLoadingRepos] = useState(false);
+  const [reposError, setReposError] = useState<string | null>(null);
+  const [repoSearch, setRepoSearch] = useState("");
+
   const notificationRef = useRef<HTMLDivElement>(null);
 
   // Load saved token on mount or provider change
@@ -138,9 +166,15 @@ export function GlassDeployNotification({
       setSavedToken(null);
       setItems([]);
       setSelectedItem(null);
+      setSelectedItemType("host");
+      setSelectedGithubRepo(null);
       setDeployResult(null);
       setIsDeploying(false);
       setItemsError(null);
+      setItemTab("host-projects");
+      setGithubRepos([]);
+      setRepoSearch("");
+      setReposError(null);
     }
   }, [open]);
 
@@ -157,6 +191,40 @@ export function GlassDeployNotification({
     }
   }, [open, onClose]);
 
+  // Fetch GitHub repos
+  const fetchGithubRepos = useCallback(async () => {
+    if (!githubToken) return;
+    setIsLoadingRepos(true);
+    setReposError(null);
+
+    try {
+      const res = await fetch("/api/github/repos", {
+        headers: { "X-GitHub-Token": githubToken },
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Failed" }));
+        throw new Error(err.error || "Failed to fetch GitHub repos");
+      }
+      const data = await res.json();
+      const repos: GitHubRepoItem[] = (Array.isArray(data) ? data : []).map((r: Record<string, unknown>) => ({
+        id: r.id as number,
+        full_name: r.full_name as string,
+        name: r.name as string,
+        owner: (r.full_name as string).split("/")[0],
+        description: r.description as string | undefined,
+        private: r.private as boolean,
+        html_url: r.html_url as string,
+        default_branch: (r.default_branch as string) || "main",
+      }));
+      setGithubRepos(repos);
+    } catch (err) {
+      setReposError(err instanceof Error ? err.message : "Failed to fetch repos");
+    } finally {
+      setIsLoadingRepos(false);
+    }
+  }, [githubToken]);
+
+  // Fetch host projects
   const fetchItems = useCallback(async (provider: HostProvider, token: string) => {
     setIsLoadingItems(true);
     setItemsError(null);
@@ -219,6 +287,13 @@ export function GlassDeployNotification({
     }
   }, []);
 
+  // Fetch GitHub repos when tab switches
+  useEffect(() => {
+    if (itemTab === "github-repos" && githubToken && githubRepos.length === 0) {
+      fetchGithubRepos();
+    }
+  }, [itemTab, githubToken, githubRepos.length, fetchGithubRepos]);
+
   const handleProviderSelect = (provider: HostProvider) => {
     setSelectedProvider(provider);
     const key = PROVIDERS[provider].tokenKey;
@@ -241,7 +316,6 @@ export function GlassDeployNotification({
     localStorage.setItem(key, apiKey.trim());
     setSavedToken(apiKey.trim());
 
-    // Send message about connecting host to GitHub
     const providerName = PROVIDERS[selectedProvider].name;
     onSendMessage?.(`Make sure you connect ${providerName} to GitHub before deploying. This allows ${providerName} to access your repository and build from source.`);
 
@@ -249,39 +323,87 @@ export function GlassDeployNotification({
     fetchItems(selectedProvider, apiKey.trim());
   };
 
-  const handleItemSelect = (itemId: string) => {
+  const handleHostItemSelect = (itemId: string) => {
     setSelectedItem(itemId);
+    setSelectedItemType("host");
+    setSelectedGithubRepo(null);
+    setStep("confirm");
+  };
+
+  const handleGithubRepoSelect = (repo: GitHubRepoItem) => {
+    setSelectedItem(repo.full_name);
+    setSelectedItemType("github");
+    setSelectedGithubRepo(repo);
     setStep("confirm");
   };
 
   const handleConfirmDeploy = async () => {
-    if (!selectedProvider || !savedToken || !selectedItem) return;
+    if (!selectedProvider || !savedToken) return;
     setStep("deploying");
     setIsDeploying(true);
 
     try {
       const headerName = PROVIDERS[selectedProvider].tokenHeader;
       let res: Response;
-      const item = items.find((i) => i.id === selectedItem);
 
-      if (selectedProvider === "vercel") {
-        res = await fetch("/api/vercel/deploy", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", [headerName]: savedToken },
-          body: JSON.stringify({ projectId: selectedItem }),
-        });
-      } else if (selectedProvider === "netlify") {
-        res = await fetch("/api/netlify/deploy", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", [headerName]: savedToken },
-          body: JSON.stringify({ siteId: selectedItem, title: item?.name }),
-        });
+      if (selectedItemType === "github" && selectedGithubRepo) {
+        // Deploy from GitHub repo
+        const repo = selectedGithubRepo;
+
+        if (selectedProvider === "vercel") {
+          // Create a Vercel project linked to the GitHub repo
+          res = await fetch("/api/vercel/projects/create", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", [headerName]: savedToken },
+            body: JSON.stringify({
+              name: repo.name,
+              repoOwner: repo.owner,
+              repoName: repo.name,
+              branch: repo.default_branch || "main",
+            }),
+          });
+        } else if (selectedProvider === "netlify") {
+          // Deploy to Netlify - trigger a deploy with the repo
+          res = await fetch("/api/netlify/deploy", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", [headerName]: savedToken },
+            body: JSON.stringify({
+              siteId: repo.name,
+              title: repo.name,
+              branch: repo.default_branch || "main",
+            }),
+          });
+        } else {
+          // Render - trigger deploy with service ID
+          res = await fetch("/api/render/deploy", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", [headerName]: savedToken },
+            body: JSON.stringify({ serviceId: repo.name, clearCache: false }),
+          });
+        }
       } else {
-        res = await fetch("/api/render/deploy", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", [headerName]: savedToken },
-          body: JSON.stringify({ serviceId: selectedItem, clearCache: false }),
-        });
+        // Deploy existing host project
+        const item = items.find((i) => i.id === selectedItem);
+
+        if (selectedProvider === "vercel") {
+          res = await fetch("/api/vercel/deploy", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", [headerName]: savedToken },
+            body: JSON.stringify({ projectId: selectedItem }),
+          });
+        } else if (selectedProvider === "netlify") {
+          res = await fetch("/api/netlify/deploy", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", [headerName]: savedToken },
+            body: JSON.stringify({ siteId: selectedItem, title: item?.name }),
+          });
+        } else {
+          res = await fetch("/api/render/deploy", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", [headerName]: savedToken },
+            body: JSON.stringify({ serviceId: selectedItem, clearCache: false }),
+          });
+        }
       }
 
       if (!res.ok) {
@@ -290,14 +412,19 @@ export function GlassDeployNotification({
       }
 
       const data = await res.json().catch(() => ({}));
+      const displayName = selectedItemType === "github"
+        ? selectedGithubRepo?.full_name || selectedItem
+        : items.find((i) => i.id === selectedItem)?.name || selectedItem;
+
       setDeployResult({
         success: true,
-        message: `Deploy triggered on ${item?.name || selectedItem} via ${PROVIDERS[selectedProvider].name}`,
+        message: selectedItemType === "github"
+          ? `Created ${PROVIDERS[selectedProvider!].name} project and deployed from ${displayName}`
+          : `Deploy triggered on ${displayName} via ${PROVIDERS[selectedProvider!].name}`,
       });
       setStep("result");
 
-      // Send Jules message about the deployment
-      onSendMessage?.(`Deployment triggered on ${PROVIDERS[selectedProvider].name} for ${item?.name || selectedItem}. The build is now in progress.`);
+      onSendMessage?.(`Deployment triggered on ${PROVIDERS[selectedProvider!].name} for ${displayName}. The build is now in progress.`);
     } catch (err) {
       setDeployResult({
         success: false,
@@ -318,6 +445,19 @@ export function GlassDeployNotification({
 
   const provider = selectedProvider ? PROVIDERS[selectedProvider] : null;
 
+  // Filter GitHub repos by search
+  const filteredRepos = githubRepos.filter((r) =>
+    !repoSearch ||
+    r.full_name.toLowerCase().includes(repoSearch.toLowerCase()) ||
+    r.name.toLowerCase().includes(repoSearch.toLowerCase()) ||
+    (r.description || "").toLowerCase().includes(repoSearch.toLowerCase())
+  );
+
+  // Get display name for confirmation
+  const confirmDisplayName = selectedItemType === "github"
+    ? selectedGithubRepo?.full_name || selectedItem
+    : items.find((i) => i.id === selectedItem)?.name || selectedItem;
+
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
@@ -336,10 +476,10 @@ export function GlassDeployNotification({
             </div>
             <div>
               <h2 className="text-[#E0F7FA] font-bold text-lg tracking-tight leading-none">
-                {step === "select-provider" ? "Deploy" : step === "api-key" ? `Connect ${provider?.name}` : step === "confirm" ? "Confirm Deploy" : step === "deploying" ? "Deploying..." : step === "result" ? deployResult?.success ? "Deploy Triggered!" : "Deploy Failed" : `Select ${provider?.itemLabel}`}
+                {step === "select-provider" ? "Deploy" : step === "api-key" ? `Connect ${provider?.name}` : step === "confirm" ? "Confirm Deploy" : step === "deploying" ? "Deploying..." : step === "result" ? deployResult?.success ? "Deploy Triggered!" : "Deploy Failed" : "Select Source"}
               </h2>
               <p className="text-[#547B88] text-[10px] font-mono uppercase tracking-widest mt-0.5">
-                {step === "select-provider" ? "Choose deployment host" : step === "api-key" ? "API access required" : step === "confirm" ? "Review before deploying" : step === "result" ? "Deployment status" : `${provider?.name} ${provider?.itemLabel}s`}
+                {step === "select-provider" ? "Choose deployment host" : step === "api-key" ? "API access required" : step === "confirm" ? "Review before deploying" : step === "result" ? "Deployment status" : `${provider?.name} project or GitHub repo`}
               </p>
             </div>
           </div>
@@ -390,7 +530,6 @@ export function GlassDeployNotification({
           {/* Step: API Key Input */}
           {step === "api-key" && provider && (
             <div className="space-y-4">
-              {/* API Key Input */}
               <div className="space-y-2">
                 <label className="text-[10px] font-mono text-[#547B88] uppercase font-bold tracking-[0.2em] ml-1 flex items-center gap-1.5">
                   <Key size={10} /> {provider.tokenLabel}
@@ -404,7 +543,6 @@ export function GlassDeployNotification({
                 />
               </div>
 
-              {/* How to get API key */}
               <div className="rounded-xl bg-white/[0.02] border border-white/5 px-4 py-3 space-y-2">
                 <p className="text-[10px] font-mono text-[#547B88] uppercase font-bold tracking-[0.15em] flex items-center gap-1.5">
                   <Key size={10} /> How to get an API key
@@ -421,7 +559,6 @@ export function GlassDeployNotification({
                 </a>
               </div>
 
-              {/* GitHub Connection Warning */}
               <div className="rounded-xl bg-[#00E5FF]/5 border border-[#00E5FF]/15 px-4 py-3 flex items-start gap-3">
                 <Github size={16} className="text-[#00E5FF] shrink-0 mt-0.5" />
                 <div>
@@ -434,22 +571,16 @@ export function GlassDeployNotification({
                 </div>
               </div>
 
-              {/* Connect Button */}
               <button
                 onClick={handleSaveApiKey}
                 disabled={!apiKey.trim()}
                 className="w-full py-3.5 text-sm font-bold active:scale-95 transition-all rounded-xl flex items-center justify-center gap-2 shadow-lg disabled:opacity-40"
-                style={{
-                  backgroundColor: provider.color,
-                  color: "#071115",
-                  boxShadow: `0 4px 15px ${provider.color}33`,
-                }}
+                style={{ backgroundColor: provider.color, color: "#071115", boxShadow: `0 4px 15px ${provider.color}33` }}
               >
                 <Key size={16} />
                 Connect {provider.name}
               </button>
 
-              {/* Back */}
               <button
                 onClick={() => { setStep("select-provider"); setSelectedProvider(null); setApiKey(""); setSavedToken(null); }}
                 className="w-full py-2 text-xs text-[#547B88] font-mono uppercase tracking-widest hover:text-[#E0F7FA] transition-all"
@@ -459,7 +590,7 @@ export function GlassDeployNotification({
             </div>
           )}
 
-          {/* Step: Select Item */}
+          {/* Step: Select Item (with tabs: Host Projects / GitHub Repos) */}
           {step === "select-item" && provider && (
             <div className="space-y-3">
               {/* Token connected indicator */}
@@ -483,60 +614,172 @@ export function GlassDeployNotification({
                 </button>
               </div>
 
-              <label className="text-[10px] font-mono text-[#547B88] uppercase font-bold tracking-[0.2em] ml-1">
-                Select {provider.itemLabel} to Deploy
-              </label>
+              {/* Tab Switcher */}
+              <div className="flex gap-1 p-1 bg-white/[0.02] border border-white/5 rounded-xl">
+                <button
+                  onClick={() => setItemTab("host-projects")}
+                  className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                    itemTab === "host-projects"
+                      ? "bg-white/10 text-[#E0F7FA]"
+                      : "text-[#547B88] hover:text-[#E0F7FA]"
+                  }`}
+                >
+                  <Rocket size={12} />
+                  {provider.itemLabel}s
+                </button>
+                <button
+                  onClick={() => setItemTab("github-repos")}
+                  className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                    itemTab === "github-repos"
+                      ? "bg-white/10 text-[#E0F7FA]"
+                      : "text-[#547B88] hover:text-[#E0F7FA]"
+                  }`}
+                >
+                  <Github size={12} />
+                  GitHub Repos
+                </button>
+              </div>
 
-              {isLoadingItems ? (
-                <div className="text-center py-8">
-                  <Loader2 size={24} style={{ color: provider.color }} className="mx-auto mb-2 animate-spin" />
-                  <p className="text-xs text-[#547B88]">Loading {provider.name} {provider.itemLabel.toLowerCase()}s...</p>
-                </div>
-              ) : itemsError ? (
-                <div className="text-center py-6">
-                  <AlertCircle size={24} className="text-[#FF2A5F] mx-auto mb-2" />
-                  <p className="text-xs text-[#FF2A5F]">{itemsError}</p>
-                  <button
-                    onClick={() => selectedProvider && fetchItems(selectedProvider, savedToken || "")}
-                    className="mt-2 text-xs font-bold hover:underline"
-                    style={{ color: provider.color }}
-                  >
-                    Retry
-                  </button>
-                </div>
-              ) : items.length === 0 ? (
-                <div className="text-center py-6">
-                  <p className="text-xs text-[#547B88]">No {provider.name} {provider.itemLabel.toLowerCase()}s found</p>
-                  <p className="text-[10px] text-[#547B88] mt-1 opacity-60">Create a {provider.itemLabel.toLowerCase()} on {provider.name} first</p>
-                </div>
-              ) : (
-                <div className="space-y-2 max-h-[35vh] overflow-y-auto">
-                  {items.map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => handleItemSelect(item.id)}
-                      className="w-full flex items-center gap-3 px-4 py-3 bg-white/[0.02] border border-white/5 hover:bg-white/5 rounded-xl text-left transition-all active:scale-[0.98]"
-                    >
-                      <div
-                        className="w-8 h-8 flex items-center justify-center rounded-lg shrink-0"
-                        style={{ backgroundColor: `${provider.color}15`, color: provider.color }}
+              {/* Tab: Host Projects */}
+              {itemTab === "host-projects" && (
+                <>
+                  <label className="text-[10px] font-mono text-[#547B88] uppercase font-bold tracking-[0.2em] ml-1">
+                    Existing {provider.itemLabel}s on {provider.name}
+                  </label>
+                  {isLoadingItems ? (
+                    <div className="text-center py-8">
+                      <Loader2 size={24} style={{ color: provider.color }} className="mx-auto mb-2 animate-spin" />
+                      <p className="text-xs text-[#547B88]">Loading {provider.name} {provider.itemLabel.toLowerCase()}s...</p>
+                    </div>
+                  ) : itemsError ? (
+                    <div className="text-center py-6">
+                      <AlertCircle size={24} className="text-[#FF2A5F] mx-auto mb-2" />
+                      <p className="text-xs text-[#FF2A5F]">{itemsError}</p>
+                      <button
+                        onClick={() => selectedProvider && fetchItems(selectedProvider, savedToken || "")}
+                        className="mt-2 text-xs font-bold hover:underline"
+                        style={{ color: provider.color }}
                       >
-                        <Rocket size={14} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-mono truncate text-[#E0F7FA]">{item.name}</p>
-                        {item.url && (
-                          <p className="text-[10px] text-[#547B88] font-mono truncate">{item.url}</p>
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                </div>
+                        Retry
+                      </button>
+                    </div>
+                  ) : items.length === 0 ? (
+                    <div className="text-center py-6">
+                      <p className="text-xs text-[#547B88]">No {provider.name} {provider.itemLabel.toLowerCase()}s found</p>
+                      <p className="text-[10px] text-[#547B88] mt-1 opacity-60">Switch to GitHub Repos tab to deploy a repo</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-[30vh] overflow-y-auto">
+                      {items.map((item) => (
+                        <button
+                          key={item.id}
+                          onClick={() => handleHostItemSelect(item.id)}
+                          className="w-full flex items-center gap-3 px-4 py-3 bg-white/[0.02] border border-white/5 hover:bg-white/5 rounded-xl text-left transition-all active:scale-[0.98]"
+                        >
+                          <div
+                            className="w-8 h-8 flex items-center justify-center rounded-lg shrink-0"
+                            style={{ backgroundColor: `${provider.color}15`, color: provider.color }}
+                          >
+                            <Rocket size={14} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-mono truncate text-[#E0F7FA]">{item.name}</p>
+                            {item.url && (
+                              <p className="text-[10px] text-[#547B88] font-mono truncate">{item.url}</p>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Tab: GitHub Repos */}
+              {itemTab === "github-repos" && (
+                <>
+                  {/* Search repos */}
+                  <div className="bg-white/5 border border-white/10 rounded-xl flex items-center px-3 py-2.5">
+                    <Search size={14} className="text-[#547B88] mr-2 shrink-0" />
+                    <input
+                      type="text"
+                      placeholder="Search GitHub repos..."
+                      value={repoSearch}
+                      onChange={(e) => setRepoSearch(e.target.value)}
+                      className="bg-transparent border-none outline-none w-full text-sm text-[#E0F7FA] placeholder-[#1A3540] font-mono"
+                    />
+                  </div>
+
+                  {!githubToken ? (
+                    <div className="text-center py-6 space-y-2">
+                      <Github size={28} className="text-[#547B88] mx-auto opacity-30" />
+                      <p className="text-xs text-[#547B88]">GitHub token required to browse repos</p>
+                      <p className="text-[10px] text-[#547B88] opacity-60">Connect your GitHub account in the Agents tab</p>
+                    </div>
+                  ) : isLoadingRepos ? (
+                    <div className="text-center py-8">
+                      <Loader2 size={24} className="text-[#E0F7FA] mx-auto mb-2 animate-spin" />
+                      <p className="text-xs text-[#547B88]">Loading GitHub repos...</p>
+                    </div>
+                  ) : reposError ? (
+                    <div className="text-center py-6">
+                      <AlertCircle size={24} className="text-[#FF2A5F] mx-auto mb-2" />
+                      <p className="text-xs text-[#FF2A5F]">{reposError}</p>
+                      <button
+                        onClick={fetchGithubRepos}
+                        className="mt-2 text-xs text-[#00E5FF] font-bold hover:underline"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  ) : filteredRepos.length === 0 ? (
+                    <div className="text-center py-6">
+                      <p className="text-xs text-[#547B88]">
+                        {repoSearch ? `No repos matching "${repoSearch}"` : "No GitHub repos found"}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-[30vh] overflow-y-auto">
+                      {filteredRepos.map((repo) => (
+                        <button
+                          key={repo.id}
+                          onClick={() => handleGithubRepoSelect(repo)}
+                          className="w-full flex items-center gap-3 px-4 py-3 bg-white/[0.02] border border-white/5 hover:bg-white/5 rounded-xl text-left transition-all active:scale-[0.98]"
+                        >
+                          <div className="w-8 h-8 flex items-center justify-center rounded-lg shrink-0 bg-[#E0F7FA]/10 text-[#E0F7FA]">
+                            <Github size={14} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-mono truncate text-[#E0F7FA]">{repo.full_name}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              {repo.private && (
+                                <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-[#FF2A5F]/10 text-[#FF2A5F] border border-[#FF2A5F]/20 uppercase">Private</span>
+                              )}
+                              <span className="text-[10px] text-[#547B88] font-mono flex items-center gap-0.5">
+                                <GitBranch size={8} /> {repo.default_branch || "main"}
+                              </span>
+                            </div>
+                            {repo.description && (
+                              <p className="text-[10px] text-[#547B88] line-clamp-1 mt-0.5 opacity-60">{repo.description}</p>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Repo count */}
+                  {githubRepos.length > 0 && (
+                    <p className="text-[10px] text-[#547B88] font-mono text-center opacity-40">
+                      {filteredRepos.length} of {githubRepos.length} repos
+                    </p>
+                  )}
+                </>
               )}
 
               {/* Back */}
               <button
-                onClick={() => { setStep("select-provider"); setSelectedProvider(null); setItems([]); setSelectedItem(null); }}
+                onClick={() => { setStep("select-provider"); setSelectedProvider(null); setItems([]); setSelectedItem(null); setItemTab("host-projects"); }}
                 className="w-full py-2 text-xs text-[#547B88] font-mono uppercase tracking-widest hover:text-[#E0F7FA] transition-all"
               >
                 Back to host selection
@@ -551,20 +794,33 @@ export function GlassDeployNotification({
                 <div className="flex items-center gap-3">
                   <div
                     className="w-12 h-12 flex items-center justify-center rounded-xl shrink-0"
-                    style={{ backgroundColor: `${provider.color}15`, color: provider.color }}
+                    style={{ backgroundColor: selectedItemType === "github" ? "#E0F7FA15" : `${provider.color}15`, color: selectedItemType === "github" ? "#E0F7FA" : provider.color }}
                   >
-                    <Rocket size={22} />
+                    {selectedItemType === "github" ? <Github size={22} /> : <Rocket size={22} />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-[#E0F7FA]">
-                      {items.find((i) => i.id === selectedItem)?.name || selectedItem}
+                    <p className="text-sm font-bold text-[#E0F7FA] truncate">
+                      {confirmDisplayName}
                     </p>
                     <p className="text-[10px] font-mono" style={{ color: provider.color }}>
-                      Deploy to {provider.name}
+                      {selectedItemType === "github"
+                        ? `Deploy GitHub repo to ${provider.name}`
+                        : `Redeploy on ${provider.name}`
+                      }
                     </p>
                   </div>
                 </div>
-                {items.find((i) => i.id === selectedItem)?.url && (
+                {selectedItemType === "github" && selectedGithubRepo && (
+                  <div className="flex items-center gap-2 pl-15">
+                    {selectedGithubRepo.private && (
+                      <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-[#FF2A5F]/10 text-[#FF2A5F] border border-[#FF2A5F]/20 uppercase">Private</span>
+                    )}
+                    <span className="text-[10px] text-[#547B88] font-mono flex items-center gap-0.5">
+                      <GitBranch size={8} /> {selectedGithubRepo.default_branch || "main"}
+                    </span>
+                  </div>
+                )}
+                {selectedItemType === "host" && items.find((i) => i.id === selectedItem)?.url && (
                   <p className="text-[10px] text-[#547B88] font-mono truncate pl-15">
                     {items.find((i) => i.id === selectedItem)?.url}
                   </p>
@@ -574,11 +830,13 @@ export function GlassDeployNotification({
               <div className="rounded-xl bg-[#B388FF]/5 border border-[#B388FF]/15 px-4 py-3 flex items-start gap-3">
                 <ShieldCheck size={16} className="text-[#B388FF] shrink-0 mt-0.5" />
                 <p className="text-xs text-[#547B88] leading-relaxed">
-                  Are you sure you want to trigger a deployment to <span className="font-bold" style={{ color: provider.color }}>{provider.name}</span>? This will start a new build and deploy process for the selected {provider.itemLabel.toLowerCase()}.
+                  {selectedItemType === "github"
+                    ? <>Are you sure you want to create a new <span className="font-bold" style={{ color: provider.color }}>{provider.name}</span> project and deploy from <span className="font-bold text-[#E0F7FA]">{confirmDisplayName}</span>? This will link your GitHub repo and trigger the first build.</>
+                    : <>Are you sure you want to trigger a deployment to <span className="font-bold" style={{ color: provider.color }}>{provider.name}</span>? This will start a new build and deploy process.</>
+                  }
                 </p>
               </div>
 
-              {/* Yes / No Buttons */}
               <div className="flex gap-3">
                 <button
                   onClick={handleCancelConfirm}
@@ -589,11 +847,7 @@ export function GlassDeployNotification({
                 <button
                   onClick={handleConfirmDeploy}
                   className="flex-[2] py-3.5 text-sm font-bold active:scale-95 transition-all rounded-xl flex items-center justify-center gap-2 shadow-lg"
-                  style={{
-                    backgroundColor: provider.color,
-                    color: "#071115",
-                    boxShadow: `0 10px 30px ${provider.color}33`,
-                  }}
+                  style={{ backgroundColor: provider.color, color: "#071115", boxShadow: `0 10px 30px ${provider.color}33` }}
                 >
                   <Rocket size={18} />
                   Yes, Deploy
@@ -614,9 +868,11 @@ export function GlassDeployNotification({
                 </div>
               </div>
               <div className="text-center">
-                <p className="text-sm font-bold text-[#E0F7FA]">Deploying to {provider.name}...</p>
+                <p className="text-sm font-bold text-[#E0F7FA]">
+                  {selectedItemType === "github" ? `Creating project & deploying to ${provider.name}...` : `Deploying to ${provider.name}...`}
+                </p>
                 <p className="text-[10px] text-[#547B88] font-mono mt-1">
-                  {items.find((i) => i.id === selectedItem)?.name || selectedItem}
+                  {confirmDisplayName}
                 </p>
               </div>
               <Loader2 size={28} style={{ color: provider.color }} className="animate-spin" />
@@ -649,10 +905,7 @@ export function GlassDeployNotification({
               <button
                 onClick={onClose}
                 className="w-full py-3.5 text-sm font-bold active:scale-95 transition-all rounded-xl"
-                style={{
-                  backgroundColor: deployResult.success ? "#00E676" : "#FF2A5F",
-                  color: "#071115",
-                }}
+                style={{ backgroundColor: deployResult.success ? "#00E676" : "#FF2A5F", color: "#071115" }}
               >
                 Done
               </button>

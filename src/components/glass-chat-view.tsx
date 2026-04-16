@@ -414,6 +414,7 @@ export function GlassChatView({ sessionId, apiKey, onBack, onAddRepo, onDeploy, 
         open={deployOpen}
         onClose={() => { setDeployOpen(false); setSelectedDeployProvider(undefined); }}
         preselectedProvider={selectedDeployProvider}
+        githubToken={githubToken}
         onSendMessage={(msg) => {
           // Send deploy-related messages as a Jules session message
           sendMessage(apiKey, sessionId, msg).catch(() => {});

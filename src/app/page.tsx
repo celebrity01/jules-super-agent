@@ -162,6 +162,7 @@ export default function Home() {
             onNewMission={() => setIsNewMissionOpen(true)}
             onAddRepo={() => setIsAddRepoOpen(true)}
             onRefresh={handleRefresh}
+            githubToken={githubToken || undefined}
           />
         )}
         {view === "chat" && selectedSessionId && apiKey && (
