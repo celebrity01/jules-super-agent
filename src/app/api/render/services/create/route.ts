@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
  * Body: { name, repoOwner, repoName, branch?, startCommand?, buildCommand?, env?, plan? }
  *
  * Uses the Render API to create a web service from a GitHub repo.
+ * Automatically fetches the ownerId from the Render API.
  * Docs: https://api-docs.render.com/reference/create-service
  */
 export async function POST(req: NextRequest) {
@@ -22,9 +23,53 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "repoOwner and repoName are required" }, { status: 400 });
     }
 
+    // Step 1: Fetch ownerId from Render API
+    const ownersRes = await fetch("https://api.render.com/v1/owners", {
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    const ownersText = await ownersRes.text();
+    let ownersData;
+    try { ownersData = JSON.parse(ownersText); } catch {
+      return NextResponse.json(
+        { error: `Failed to fetch Render owners: non-JSON response (${ownersRes.status})` },
+        { status: ownersRes.status || 502 }
+      );
+    }
+
+    if (!ownersRes.ok) {
+      return NextResponse.json(
+        { error: ownersData.message || `Failed to fetch Render owners (${ownersRes.status})` },
+        { status: ownersRes.status }
+      );
+    }
+
+    // Extract the first owner ID (user or team)
+    let ownerId: string | null = null;
+    if (Array.isArray(ownersData) && ownersData.length > 0) {
+      ownerId = (ownersData[0].owner?.id || ownersData[0].id) as string;
+    } else if (ownersData?.owner?.id) {
+      ownerId = ownersData.owner.id as string;
+    } else if (ownersData?.id) {
+      ownerId = ownersData.id as string;
+    }
+
+    if (!ownerId) {
+      return NextResponse.json(
+        { error: "Could not determine Render owner ID. Make sure your API key is valid." },
+        { status: 400 }
+      );
+    }
+
+    // Step 2: Create the service with ownerId
     const serviceBody: Record<string, unknown> = {
       type: "web_service",
       name: name || repoName,
+      ownerId,
       repo: `https://github.com/${repoOwner}/${repoName}`,
       branch: branch || "main",
       startCommand: startCommand || "npm start",
