@@ -2,8 +2,6 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { ApiKeySetup } from "@/components/api-key-setup";
-import { SupabaseSetup } from "@/components/supabase-setup";
-import { AuthDialog } from "@/components/auth-dialog";
 import { GlassThreadsView } from "@/components/glass-threads-view";
 import { GlassChatView } from "@/components/glass-chat-view";
 import { GlassAgentsView } from "@/components/glass-agents-view";
@@ -11,22 +9,8 @@ import { GlassMCPView } from "@/components/glass-mcp-view";
 import { GlassPingsView } from "@/components/glass-pings-view";
 import { GlassNewMissionModal } from "@/components/glass-new-mission-modal";
 import { GlassAddRepoModal } from "@/components/glass-add-repo-modal";
+import { GlassDeployModal } from "@/components/glass-deploy-modal";
 import { JulesSource, JulesSession, listSources, listSessions } from "@/lib/jules-client";
-import {
-  getSupabaseConfig,
-  getSupabaseClient,
-  clearSupabaseConfig,
-  getSupabaseAccessToken,
-  clearSupabaseAccessToken,
-} from "@/lib/supabase-client";
-import {
-  getCurrentUser,
-  loadApiKeys,
-  saveApiKeys,
-  signOut as supabaseSignOut,
-  deleteApiKeys,
-} from "@/lib/supabase-data";
-import type { User } from "@supabase/supabase-js";
 import {
   MessageSquare,
   Bot,
@@ -37,21 +21,15 @@ import {
 
 const STORAGE_KEY = "jules-api-key";
 const GITHUB_TOKEN_KEY = "github-token";
-const RENDER_API_KEY = "render-api-key";
 
-type AppStep = "supabase-setup" | "auth" | "api-key" | "dashboard";
+type AppStep = "api-key" | "dashboard";
 type ViewType = "threads" | "chat" | "agents" | "mcp" | "pings";
 
 export default function Home() {
-  const [step, setStep] = useState<AppStep>("supabase-setup");
+  const [step, setStep] = useState<AppStep>("api-key");
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [githubToken, setGithubToken] = useState<string | null>(null);
-  const [supabaseUser, setSupabaseUser] = useState<User | null>(null);
-  const [supabasePAT, setSupabasePAT] = useState<string | null>(null);
-  const [renderApiKey, setRenderApiKey] = useState<string | null>(null);
-  const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [hasSupabaseConfig, setHasSupabaseConfig] = useState(false);
 
   // Dashboard state
   const [sources, setSources] = useState<JulesSource[]>([]);
@@ -62,62 +40,18 @@ export default function Home() {
   const [view, setView] = useState<ViewType>("threads");
   const [isNewMissionOpen, setIsNewMissionOpen] = useState(false);
   const [isAddRepoOpen, setIsAddRepoOpen] = useState(false);
+  const [isDeployOpen, setIsDeployOpen] = useState(false);
 
-  // Init
+  // Init — load from localStorage
   useEffect(() => {
-    const init = async () => {
-      const existingPAT = getSupabaseAccessToken();
-      if (existingPAT) setSupabasePAT(existingPAT);
-
-      const supabaseConfig = getSupabaseConfig();
-      setHasSupabaseConfig(!!supabaseConfig);
-      if (supabaseConfig) {
-        try {
-          const user = await getCurrentUser();
-          if (user) {
-            setSupabaseUser(user);
-            try {
-              const keys = await loadApiKeys(user.id);
-              if (keys) {
-                setApiKey(keys.jules_api_key);
-                if (keys.github_token) setGithubToken(keys.github_token);
-                setStep("dashboard");
-                setIsLoading(false);
-                return;
-              }
-            } catch { /* tables may not exist */ }
-          }
-        } catch { /* connection issue */ }
-      }
-
-      const storedKey = localStorage.getItem(STORAGE_KEY);
-      if (storedKey) {
-        setApiKey(storedKey);
-        const storedGithubToken = localStorage.getItem(GITHUB_TOKEN_KEY);
-        if (storedGithubToken) setGithubToken(storedGithubToken);
-        const storedRenderKey = localStorage.getItem(RENDER_API_KEY);
-        if (storedRenderKey) setRenderApiKey(storedRenderKey);
-        setStep("dashboard");
-        setIsLoading(false);
-        return;
-      }
-
-      if (supabaseConfig) { setStep("api-key"); }
-      else { setStep("supabase-setup"); }
-      setIsLoading(false);
-    };
-    init();
-  }, []);
-
-  // Auth state listener
-  useEffect(() => {
-    const supabase = getSupabaseClient();
-    if (!supabase) return;
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_IN" && session?.user) setSupabaseUser(session.user);
-      else if (event === "SIGNED_OUT") setSupabaseUser(null);
-    });
-    return () => subscription.unsubscribe();
+    const storedKey = localStorage.getItem(STORAGE_KEY);
+    if (storedKey) {
+      setApiKey(storedKey);
+      const storedGithubToken = localStorage.getItem(GITHUB_TOKEN_KEY);
+      if (storedGithubToken) setGithubToken(storedGithubToken);
+      setStep("dashboard");
+    }
+    setIsLoading(false);
   }, []);
 
   // Fetch data when dashboard
@@ -149,100 +83,28 @@ export default function Home() {
   }, [step, fetchSources, fetchSessions]);
 
   // Handlers
-  const handleSupabaseConfigured = useCallback(() => {
-    setIsAuthDialogOpen(true);
-    setStep("api-key");
-  }, []);
-
-  const handleSupabaseSkip = useCallback(() => {
-    const storedKey = localStorage.getItem(STORAGE_KEY);
-    if (storedKey) { setApiKey(storedKey); setStep("dashboard"); }
-    else { setStep("api-key"); }
-  }, []);
-
-  const handleAuthSuccess = useCallback(async (user: User) => {
-    setSupabaseUser(user);
-    try {
-      const keys = await loadApiKeys(user.id);
-      if (keys) {
-        setApiKey(keys.jules_api_key);
-        if (keys.github_token) setGithubToken(keys.github_token);
-        setStep("dashboard");
-        return;
-      }
-    } catch { /* silent */ }
-
-    const storedKey = localStorage.getItem(STORAGE_KEY);
-    if (storedKey) {
-      setApiKey(storedKey);
-      const storedGithubToken = localStorage.getItem(GITHUB_TOKEN_KEY);
-      if (storedGithubToken) setGithubToken(storedGithubToken);
-      try { await saveApiKeys(user.id, storedKey, storedGithubToken); } catch { /* silent */ }
-      setStep("dashboard");
-    } else {
-      setStep("api-key");
-    }
-  }, []);
-
-  const handleConnect = useCallback(async (key: string) => {
+  const handleConnect = useCallback((key: string) => {
     localStorage.setItem(STORAGE_KEY, key);
     setApiKey(key);
-    if (supabaseUser) {
-      try { await saveApiKeys(supabaseUser.id, key, githubToken); } catch { /* silent */ }
-    }
     setStep("dashboard");
-  }, [supabaseUser, githubToken]);
+  }, []);
 
-  const handleDisconnect = useCallback(async () => {
+  const handleDisconnect = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(GITHUB_TOKEN_KEY);
-    localStorage.removeItem(RENDER_API_KEY);
     setApiKey(null);
     setGithubToken(null);
-    setRenderApiKey(null);
-    if (supabaseUser) {
-      try { await deleteApiKeys(supabaseUser.id); } catch { /* silent */ }
-    }
     setStep("api-key");
-  }, [supabaseUser]);
+  }, []);
 
-  const handleGithubTokenChange = useCallback(async (token: string | null) => {
+  const handleGithubTokenChange = useCallback((token: string | null) => {
     if (token) {
       localStorage.setItem(GITHUB_TOKEN_KEY, token);
       setGithubToken(token);
-      if (supabaseUser && apiKey) {
-        try { await saveApiKeys(supabaseUser.id, apiKey, token); } catch { /* silent */ }
-      }
     } else {
       localStorage.removeItem(GITHUB_TOKEN_KEY);
       setGithubToken(null);
-      if (supabaseUser && apiKey) {
-        try { await saveApiKeys(supabaseUser.id, apiKey, null); } catch { /* silent */ }
-      }
     }
-  }, [supabaseUser, apiKey]);
-
-  const handleSignOut = useCallback(async () => {
-    await supabaseSignOut();
-    setSupabaseUser(null);
-  }, []);
-
-  const handleSupabasePATChange = useCallback((pat: string | null) => {
-    if (pat) setSupabasePAT(pat);
-    else { clearSupabaseAccessToken(); setSupabasePAT(null); }
-  }, []);
-
-  const handleResetSupabase = useCallback(() => {
-    clearSupabaseConfig();
-    clearSupabaseAccessToken();
-    setSupabaseUser(null);
-    setSupabasePAT(null);
-    setStep("supabase-setup");
-  }, []);
-
-  const handleRenderApiKeyChange = useCallback((key: string | null) => {
-    if (key) { localStorage.setItem(RENDER_API_KEY, key); setRenderApiKey(key); }
-    else { localStorage.removeItem(RENDER_API_KEY); setRenderApiKey(null); }
   }, []);
 
   const handleSessionCreated = (sessionId: string) => {
@@ -275,25 +137,9 @@ export default function Home() {
     );
   }
 
-  // Pre-dashboard steps
-  if (step === "supabase-setup") {
-    return (
-      <>
-        <SupabaseSetup onConfigured={handleSupabaseConfigured} onSkip={handleSupabaseSkip} />
-        <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} onAuthSuccess={handleAuthSuccess} />
-      </>
-    );
-  }
-
+  // API key step
   if (step === "api-key") {
-    return (
-      <>
-        <ApiKeySetup onConnect={handleConnect} />
-        {hasSupabaseConfig && (
-          <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} onAuthSuccess={handleAuthSuccess} />
-        )}
-      </>
-    );
+    return <ApiKeySetup onConnect={handleConnect} />;
   }
 
   // Dashboard
@@ -326,6 +172,8 @@ export default function Home() {
             apiKey={apiKey}
             onBack={() => { setView("threads"); setSelectedSessionId(null); }}
             onAddRepo={() => setIsAddRepoOpen(true)}
+            onDeploy={() => setIsDeployOpen(true)}
+            githubToken={githubToken || undefined}
           />
         )}
         {view === "agents" && (
@@ -334,14 +182,6 @@ export default function Home() {
             onDisconnect={handleDisconnect}
             githubToken={githubToken}
             onGitHubTokenChange={handleGithubTokenChange}
-            supabaseUser={supabaseUser}
-            supabasePAT={supabasePAT}
-            onSupabasePATChange={handleSupabasePATChange}
-            onSignIn={() => setIsAuthDialogOpen(true)}
-            onSignOut={handleSignOut}
-            onResetSupabase={handleResetSupabase}
-            renderApiKey={renderApiKey}
-            onRenderApiKeyChange={handleRenderApiKeyChange}
             onAddRepo={() => setIsAddRepoOpen(true)}
           />
         )}
@@ -349,8 +189,6 @@ export default function Home() {
           <GlassMCPView
             sources={sources}
             isLoadingSources={isLoadingSources}
-            hasSupabasePAT={!!supabasePAT}
-            hasRenderKey={!!renderApiKey}
             onAddRepo={() => setIsAddRepoOpen(true)}
             onRefresh={handleRefresh}
           />
@@ -411,13 +249,13 @@ export default function Home() {
           onRepoCreated={() => { fetchSources(); setIsAddRepoOpen(false); }}
         />
       )}
-
-      {/* Auth Dialog */}
-      {hasSupabaseConfig && (
-        <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} onAuthSuccess={handleAuthSuccess} />
+      {isDeployOpen && (
+        <GlassDeployModal
+          open={isDeployOpen}
+          onClose={() => setIsDeployOpen(false)}
+          githubToken={githubToken || undefined}
+        />
       )}
-
-      {/* Copy Toast (global) */}
     </div>
   );
 }

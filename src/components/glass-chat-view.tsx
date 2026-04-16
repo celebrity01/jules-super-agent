@@ -32,6 +32,7 @@ import {
   ChevronDown,
   MessageSquare,
   ShieldCheck,
+  Rocket,
 } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -41,6 +42,8 @@ interface GlassChatViewProps {
   apiKey: string;
   onBack: () => void;
   onAddRepo: () => void;
+  onDeploy: () => void;
+  githubToken?: string;
 }
 
 function formatTime(dateStr: string): string {
@@ -72,7 +75,7 @@ function isAwaitingApproval(state?: string): boolean {
   return state === "AWAITING_APPROVAL" || state === "AWAITING_PLAN_APPROVAL";
 }
 
-export function GlassChatView({ sessionId, apiKey, onBack, onAddRepo }: GlassChatViewProps) {
+export function GlassChatView({ sessionId, apiKey, onBack, onAddRepo, onDeploy, githubToken }: GlassChatViewProps) {
   const [session, setSession] = useState<JulesSession | null>(null);
   const [activities, setActivities] = useState<JulesActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -81,8 +84,10 @@ export function GlassChatView({ sessionId, apiKey, onBack, onAddRepo }: GlassCha
   const [isApproving, setIsApproving] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [copyId, setCopyId] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -159,6 +164,17 @@ export function GlassChatView({ sessionId, apiKey, onBack, onAddRepo }: GlassCha
     e.target.style.height = "auto";
     e.target.style.height = e.target.scrollHeight + "px";
   };
+
+  // Close menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    if (menuOpen) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [menuOpen]);
 
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -267,9 +283,41 @@ export function GlassChatView({ sessionId, apiKey, onBack, onAddRepo }: GlassCha
           <button onClick={onAddRepo} className="p-2.5 text-[#E0F7FA] hover:bg-white/5 rounded-full transition-all">
             <FolderPlus size={20} />
           </button>
-          <button className="p-2.5 text-[#547B88] hover:bg-white/5 rounded-full transition-all">
-            <MoreVertical size={20} />
-          </button>
+          {/* Deploy Dropdown */}
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="p-2.5 text-[#547B88] hover:text-[#E0F7FA] hover:bg-white/5 rounded-full transition-all"
+            >
+              <MoreVertical size={20} />
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-56 bg-[#0a1419] border border-white/10 rounded-2xl shadow-2xl z-[200] overflow-hidden animate-slide-up">
+                <div className="p-2 border-b border-white/5">
+                  <p className="text-[9px] font-mono text-[#547B88] uppercase tracking-[0.15em] font-bold px-3 py-1">Deploy to</p>
+                </div>
+                {[
+                  { id: "vercel", name: "Vercel", color: "#E0F7FA" },
+                  { id: "render", name: "Render", color: "#46E3B7" },
+                  { id: "netlify", name: "Netlify", color: "#30C8C9" },
+                ].map((host) => (
+                  <button
+                    key={host.id}
+                    onClick={() => { setMenuOpen(false); onDeploy(); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/5 transition-all text-[#E0F7FA]"
+                  >
+                    <div className="w-8 h-8 flex items-center justify-center rounded-lg shrink-0" style={{ backgroundColor: `${host.color}15`, color: host.color }}>
+                      <Rocket size={14} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium" style={{ color: host.color }}>{host.name}</p>
+                      <p className="text-[10px] text-[#547B88] font-mono">Trigger deploy</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
