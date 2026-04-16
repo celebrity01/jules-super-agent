@@ -65,21 +65,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Step 2: Create the service with ownerId
+    // Step 2: Create the service with ownerId and serviceDetails
     const serviceBody: Record<string, unknown> = {
       type: "web_service",
       name: name || repoName,
       ownerId,
       repo: `https://github.com/${repoOwner}/${repoName}`,
       branch: branch || "main",
-      startCommand: startCommand || "npm start",
-      buildCommand: buildCommand || "npm install && npm run build",
-      plan: plan || "starter",
       autoDeploy: "yes",
+      serviceDetails: {
+        startCommand: startCommand || "npm start",
+        buildCommand: buildCommand || "npm install && npm run build",
+        plan: plan || "starter",
+        publishPath: "out",
+        numInstances: 1,
+        env: "node",
+        region: "oregon",
+      },
     };
 
     if (env && typeof env === "object") {
-      serviceBody.envVars = Object.entries(env).map(([key, value]) => ({
+      (serviceBody.serviceDetails as Record<string, unknown>).envVars = Object.entries(env).map(([key, value]) => ({
         key,
         value: String(value),
       }));
