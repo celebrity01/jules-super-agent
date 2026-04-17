@@ -16,6 +16,7 @@ import {
   Globe,
   Lock,
   Star,
+  AlertCircle,
 } from "lucide-react";
 import {
   JulesSource,
@@ -84,6 +85,14 @@ export function GlassNewMissionModal({
   const [isLoadingGithub, setIsLoadingGithub] = useState(false);
   const [githubError, setGithubError] = useState<string | null>(null);
 
+  // Branch selection state
+  const [branches, setBranches] = useState<{ name: string; commit_sha: string; protected: boolean }[]>([]);
+  const [isLoadingBranches, setIsLoadingBranches] = useState(false);
+  const [branchesError, setBranchesError] = useState<string | null>(null);
+  const [branchDropdownOpen, setBranchDropdownOpen] = useState(false);
+  const [branchSearch, setBranchSearch] = useState("");
+  const branchDropdownRef = useRef<HTMLDivElement>(null);
+
   // Fetch GitHub repos when dropdown opens
   const fetchGithubRepos = useCallback(async () => {
     if (!githubToken || githubRepos.length > 0) return;
@@ -105,7 +114,7 @@ export function GlassNewMissionModal({
     }
   }, [dropdownOpen, githubToken, fetchGithubRepos]);
 
-  // Close dropdown on outside click
+  // Close repo dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -118,6 +127,46 @@ export function GlassNewMissionModal({
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [dropdownOpen]);
+
+  // Close branch dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (branchDropdownRef.current && !branchDropdownRef.current.contains(e.target as Node)) {
+        setBranchDropdownOpen(false);
+      }
+    };
+    if (branchDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [branchDropdownOpen]);
+
+  // Fetch branches for the selected repo
+  const fetchBranches = useCallback(async (owner: string, repo: string) => {
+    if (!githubToken) return;
+    setIsLoadingBranches(true);
+    setBranchesError(null);
+    setBranches([]);
+    try {
+      const res = await fetch(`/api/github/repos/${owner}/${repo}/branches`, {
+        headers: { "X-GitHub-Token": githubToken },
+      });
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch {
+        throw new Error(`Invalid JSON from branches API (${res.status})`);
+      }
+      if (!res.ok) {
+        throw new Error(data.error || data.message || `Failed to fetch branches (${res.status})`);
+      }
+      const branchList = (Array.isArray(data) ? data : []) as { name: string; commit_sha: string; protected: boolean }[];
+      setBranches(branchList);
+    } catch (err) {
+      setBranchesError(err instanceof Error ? err.message : "Failed to fetch branches");
+    } finally {
+      setIsLoadingBranches(false);
+    }
+  }, [githubToken]);
 
   if (!open) return null;
 
@@ -188,6 +237,14 @@ export function GlassNewMissionModal({
     setBranch(item.branch);
     setDropdownOpen(false);
     setSearchFilter("");
+
+    // Fetch branches for the selected repo
+    const parts = item.displayName.split("/");
+    const owner = parts.length > 1 ? parts[0] : "";
+    const repoName = parts.length > 1 ? parts[1] : parts[0];
+    if (owner && repoName && githubToken) {
+      fetchBranches(owner, repoName);
+    }
   };
 
   const handleCreate = async () => {
@@ -223,6 +280,7 @@ export function GlassNewMissionModal({
     setTitle(""); setPrompt(""); setSelectedSource(""); setSelectedSourceDisplay("");
     setBranch("main"); setAutomationMode("none"); setRequireApproval(true);
     setError(null); setDropdownOpen(false); setSearchFilter("");
+    setBranches([]); setBranchesError(null); setBranchDropdownOpen(false); setBranchSearch("");
     onClose();
   };
 
@@ -423,14 +481,142 @@ export function GlassNewMissionModal({
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-mono text-[#547B88] uppercase font-bold tracking-[0.2em] ml-1">Branch Vector</label>
-              <input
-                type="text"
-                value={branch}
-                onChange={(e) => setBranch(e.target.value)}
-                disabled={isLoading}
-                className="w-full bg-white/5 border border-white/10 px-5 py-4 text-sm rounded-2xl outline-none text-[#E0F7FA] font-mono focus:border-[#00E676]/40 transition-all"
-              />
+              <label className="text-[10px] font-mono text-[#547B88] uppercase font-bold tracking-[0.2em] ml-1 flex items-center gap-1.5">
+                <GitBranch size={12} /> Branch Vector
+              </label>
+              <div className="relative" ref={branchDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!selectedSource) return;
+                    setBranchDropdownOpen(!branchDropdownOpen);
+                  }}
+                  disabled={isLoading || !selectedSource}
+                  className="w-full bg-white/5 border border-white/10 px-5 py-4 text-sm rounded-2xl text-left hover:bg-white/10 transition-all flex items-center justify-between gap-2 disabled:opacity-50"
+                >
+                  <span className="text-[#E0F7FA] font-mono flex items-center gap-2">
+                    <GitBranch size={14} className="text-[#00E676] shrink-0" />
+                    {isLoadingBranches ? (
+                      <span className="text-[#547B88] flex items-center gap-2">
+                        <Loader2 size={12} className="animate-spin" /> Loading branches...
+                      </span>
+                    ) : branch}
+                  </span>
+                  {selectedSource && (
+                    <ChevronDown size={16} className={`text-[#547B88] shrink-0 transition-transform ${branchDropdownOpen ? "rotate-180" : ""}`} />
+                  )}
+                </button>
+
+                {/* Branch Dropdown Panel */}
+                {branchDropdownOpen && selectedSource && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-[#0a1419] border border-white/10 rounded-2xl shadow-2xl z-[200] overflow-hidden animate-slide-up">
+                    {/* Search */}
+                    <div className="p-3 border-b border-white/5">
+                      <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2">
+                        <Search size={14} className="text-[#547B88] shrink-0" />
+                        <input
+                          type="text"
+                          placeholder="Filter branches..."
+                          value={branchSearch}
+                          onChange={(e) => setBranchSearch(e.target.value)}
+                          className="bg-transparent border-none outline-none w-full text-xs text-[#E0F7FA] placeholder-[#1A3540] font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Branches List */}
+                    <div className="max-h-60 overflow-y-auto">
+                      {branchesError ? (
+                        <div className="p-4 text-center">
+                          <AlertCircle size={20} className="text-[#FF2A5F] mx-auto mb-2" />
+                          <p className="text-xs text-[#FF2A5F]">{branchesError}</p>
+                          <button
+                            onClick={() => {
+                              const parts = selectedSourceDisplay.split("/");
+                              if (parts.length > 1) fetchBranches(parts[0], parts[1]);
+                            }}
+                            className="mt-2 text-xs text-[#00E5FF] font-bold hover:underline"
+                          >
+                            Retry
+                          </button>
+                        </div>
+                      ) : (() => {
+                        const filteredBranches = branches.filter((b) =>
+                          !branchSearch || b.name.toLowerCase().includes(branchSearch.toLowerCase())
+                        );
+                        return filteredBranches.length === 0 ? (
+                          <div className="p-4 text-center">
+                            <p className="text-xs text-[#547B88]">
+                              {branchSearch ? `No branches matching "${branchSearch}"` : "No branches found"}
+                            </p>
+                          </div>
+                        ) : (
+                          filteredBranches.map((b) => {
+                            const isSelected = b.name === branch;
+                            const isDefault = b.name === branches[0]?.name; // first branch is typically default
+                            return (
+                              <button
+                                key={b.name}
+                                type="button"
+                                onClick={() => {
+                                  setBranch(b.name);
+                                  setBranchDropdownOpen(false);
+                                  setBranchSearch("");
+                                }}
+                                className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/5 transition-all ${
+                                  isSelected ? "bg-[#00E5FF]/10 text-[#00E5FF]" : "text-[#E0F7FA]"
+                                }`}
+                              >
+                                <div className={`w-7 h-7 flex items-center justify-center rounded-lg shrink-0 ${
+                                  isSelected ? "bg-[#00E5FF]/20 text-[#00E5FF]" : "bg-[#B388FF]/10 text-[#B388FF]"
+                                }`}>
+                                  <GitBranch size={12} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-mono truncate">{b.name}</p>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    {isDefault && (
+                                      <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-[#00E5FF]/10 text-[#00E5FF] border border-[#00E5FF]/20 uppercase">
+                                        Default
+                                      </span>
+                                    )}
+                                    {b.protected && (
+                                      <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-[#FF2A5F]/10 text-[#FF2A5F] border border-[#FF2A5F]/20 uppercase">
+                                        Protected
+                                      </span>
+                                    )}
+                                    {b.commit_sha && (
+                                      <span className="text-[10px] text-[#547B88] font-mono">{b.commit_sha}</span>
+                                    )}
+                                  </div>
+                                </div>
+                                {isSelected && <Check size={14} className="text-[#00E5FF] shrink-0" />}
+                              </button>
+                            );
+                          })
+                        );
+                      })()}
+                    </div>
+
+                    {/* Manual branch input */}
+                    <div className="p-3 border-t border-white/5">
+                      <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2">
+                        <GitBranch size={12} className="text-[#547B88] shrink-0" />
+                        <input
+                          type="text"
+                          placeholder="Or type a branch name..."
+                          value={branch}
+                          onChange={(e) => setBranch(e.target.value)}
+                          className="bg-transparent border-none outline-none w-full text-xs text-[#E0F7FA] placeholder-[#1A3540] font-mono"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              {!selectedSource && (
+                <p className="text-[10px] text-[#547B88] ml-1">Select a repository first to browse branches</p>
+              )}
             </div>
           </div>
 
