@@ -13,9 +13,10 @@ import {
   ShieldCheck,
   Search,
   GitBranch,
+  Globe,
 } from "lucide-react";
 
-export type HostProvider = "vercel" | "netlify" | "render";
+export type HostProvider = "vercel" | "netlify" | "render" | "github-pages";
 
 interface ProviderInfo {
   name: string;
@@ -62,6 +63,17 @@ const PROVIDERS: Record<HostProvider, ProviderInfo> = {
     howToGetKey: "Go to dashboard.render.com/y/account/api-keys to generate an API key.",
     howToGetUrl: "https://dashboard.render.com/y/account/api-keys",
     itemLabel: "Service",
+  },
+  "github-pages": {
+    name: "GitHub Pages",
+    color: "#B8A9E8",
+    tokenLabel: "GitHub Token",
+    tokenPlaceholder: "Enter your GitHub personal access token",
+    tokenKey: "github-pages-token",
+    tokenHeader: "X-GitHub-Token",
+    howToGetKey: "Go to github.com/settings/tokens to create a personal access token with 'repo' scope.",
+    howToGetUrl: "https://github.com/settings/tokens",
+    itemLabel: "Site",
   },
 };
 
@@ -324,6 +336,20 @@ export function GlassDeployNotification({
           name: (s.service?.name || s.name || "Untitled") as string,
           url: (s.service?.serviceDetails?.url || s.url) as string,
         }));
+      } else if (provider === "github-pages") {
+        const { ok, status, data, text: rawText } = await safeParse(await fetch("/api/github-pages/sites", {
+          headers: { [headerName]: cleanToken },
+        }));
+        if (!ok) {
+          const err = data || { error: `Failed (${status})` };
+          throw new Error(err.error || "Failed to fetch GitHub Pages sites");
+        }
+        if (!data) throw new Error(`Invalid JSON from GitHub Pages API: ${rawText.slice(0, 100)}`);
+        fetchedItems = (Array.isArray(data) ? data : []).map((s: Record<string, unknown>) => ({
+          id: s.id as string,
+          name: s.name as string,
+          url: s.url as string,
+        }));
       }
 
       setItems(fetchedItems);
@@ -463,13 +489,24 @@ export function GlassDeployNotification({
               repoUrl: repo.html_url,
             }),
           });
-        } else {
+        } else if (selectedProvider === "render") {
           // Create a Render web service linked to the GitHub repo
           res = await fetch("/api/render/services/create", {
             method: "POST",
             headers: { "Content-Type": "application/json", [headerName]: cleanToken },
             body: JSON.stringify({
               name: repo.name,
+              repoOwner: repo.owner,
+              repoName: repo.name,
+              branch: deployBranch,
+            }),
+          });
+        } else {
+          // Enable GitHub Pages and deploy from the GitHub repo
+          res = await fetch("/api/github-pages/deploy", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", [headerName]: cleanToken },
+            body: JSON.stringify({
               repoOwner: repo.owner,
               repoName: repo.name,
               branch: deployBranch,
@@ -491,6 +528,14 @@ export function GlassDeployNotification({
             method: "POST",
             headers: { "Content-Type": "application/json", [headerName]: cleanToken },
             body: JSON.stringify({ siteId: selectedItem, title: item?.name, branch: deployBranch }),
+          });
+        } else if (selectedProvider === "github-pages") {
+          // Re-deploy existing GitHub Pages site (trigger rebuild)
+          const [repoOwner, repoName] = (selectedItem || "").split("/");
+          res = await fetch("/api/github-pages/deploy", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", [headerName]: cleanToken },
+            body: JSON.stringify({ repoOwner, repoName, branch: deployBranch }),
           });
         } else {
           res = await fetch("/api/render/deploy", {
@@ -596,7 +641,7 @@ export function GlassDeployNotification({
               <p className="text-xs text-[#547B88] leading-relaxed">
                 Select a deployment host to trigger an automatic deploy. You will need an API key for the selected service.
               </p>
-              {(["vercel", "netlify", "render"] as HostProvider[]).map((p) => {
+              {(["vercel", "netlify", "render", "github-pages"] as HostProvider[]).map((p) => {
                 const info = PROVIDERS[p];
                 const hasToken = !!localStorage.getItem(info.tokenKey);
                 return (
@@ -609,11 +654,13 @@ export function GlassDeployNotification({
                       className="w-12 h-12 flex items-center justify-center rounded-xl shrink-0"
                       style={{ backgroundColor: `${info.color}15`, color: info.color }}
                     >
-                      <Rocket size={20} />
+                      {p === "github-pages" ? <Globe size={20} /> : <Rocket size={20} />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold" style={{ color: info.color }}>{info.name}</p>
-                      <p className="text-[10px] text-[#547B88] font-mono">Trigger deploy via API</p>
+                      <p className="text-[10px] text-[#547B88] font-mono">
+                        {p === "github-pages" ? "Deploy static site via GitHub" : "Trigger deploy via API"}
+                      </p>
                     </div>
                     {hasToken && (
                       <span className="text-[8px] font-mono font-bold px-2 py-1 rounded-full bg-[#00E676]/10 text-[#00E676] border border-[#00E676]/20 uppercase">
@@ -779,7 +826,7 @@ export function GlassDeployNotification({
                             className="w-8 h-8 flex items-center justify-center rounded-lg shrink-0"
                             style={{ backgroundColor: `${provider.color}15`, color: provider.color }}
                           >
-                            <Rocket size={14} />
+                            {selectedProvider === "github-pages" ? <Globe size={14} /> : <Rocket size={14} />}
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-mono truncate text-[#E0F7FA]">{item.name}</p>
@@ -1061,7 +1108,7 @@ export function GlassDeployNotification({
                     className="w-12 h-12 flex items-center justify-center rounded-xl shrink-0"
                     style={{ backgroundColor: selectedItemType === "github" ? "#E0F7FA15" : `${provider.color}15`, color: selectedItemType === "github" ? "#E0F7FA" : provider.color }}
                   >
-                    {selectedItemType === "github" ? <Github size={22} /> : <Rocket size={22} />}
+                    {selectedItemType === "github" ? <Github size={22} /> : selectedProvider === "github-pages" ? <Globe size={22} /> : <Rocket size={22} />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-[#E0F7FA] truncate">
@@ -1147,7 +1194,7 @@ export function GlassDeployNotification({
                   className="w-20 h-20 rounded-2xl flex items-center justify-center animate-pulse"
                   style={{ backgroundColor: `${provider.color}15` }}
                 >
-                  <Rocket size={36} style={{ color: provider.color }} className="animate-bounce" />
+                  {selectedProvider === "github-pages" ? <Globe size={36} style={{ color: provider.color }} className="animate-bounce" /> : <Rocket size={36} style={{ color: provider.color }} className="animate-bounce" />}
                 </div>
               </div>
               <div className="text-center">

@@ -303,6 +303,7 @@ export function GlassChatView({ sessionId, apiKey, onBack, onAddRepo, onDeploy, 
                   { id: "vercel" as HostProvider, name: "Vercel", color: "#E0F7FA" },
                   { id: "render" as HostProvider, name: "Render", color: "#46E3B7" },
                   { id: "netlify" as HostProvider, name: "Netlify", color: "#30C8C9" },
+                  { id: "github-pages" as HostProvider, name: "GitHub Pages", color: "#B8A9E8" },
                 ].map((host) => (
                   <button
                     key={host.id}
