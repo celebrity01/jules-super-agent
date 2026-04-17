@@ -135,7 +135,7 @@ function buildDeployInstructions(hosts: Set<DeployHost>): string {
       "File Content Requirements:",
       "  - Set the build command (e.g., npm run build, yarn build, bun run build).",
       "  - Set the publish directory (e.g., dist, out, .next/static).",
-"  - Configure the Node.js version if needed via [build.environment].",
+      "  - Configure the Node.js version if needed via [build.environment].",
       "  - Add necessary redirects for single-page applications in [[redirects]] section.",
       "  - Ensure the project can be deployed by connecting the GitHub repo to Netlify.",
       "",
@@ -146,7 +146,7 @@ function buildDeployInstructions(hosts: Set<DeployHost>): string {
     lines.push(
       "RENDER DEPLOYMENT:",
       "Include a render.yaml blueprint file.",
- "File Path: render.yaml",
+      "File Path: render.yaml",
       "File Content Requirements:",
       "  - Define a web service (type: web).",
       "  - Set the runtime (e.g., Node).",
@@ -820,26 +820,27 @@ export function GlassNewMissionModal({
                     type="button"
                     onClick={() => toggleDeployHost(host)}
                     disabled={isLoading}
-                    className={`flex items-center gap-3 p-3 rounded-2xl border transition-all text-left disabled:opacity-50 ${
-                      isChecked
-                        ? `border-[${info.color}]/30 bg-[${info.color}]/10`
-                        : "bg-white/5 border-white/10 hover:border-white/20"
-                    }`}
+                    className="flex items-center gap-3 p-3 rounded-2xl border transition-all text-left disabled:opacity-50"
                     style={isChecked ? {
-                      borderColor: `${info.color}50`,
-                      backgroundColor: `${info.color}10`,
-                    } : undefined}
+                      borderColor: info.color,
+                      backgroundColor: `${info.color}18`,
+                    } : {
+                      backgroundColor: "rgba(255,255,255,0.03)",
+                      borderColor: "rgba(255,255,255,0.1)",
+                    }}
                   >
                     {/* Custom checkbox */}
                     <div
-                      className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${
-                        isChecked
-                          ? "border-transparent"
-                          : "border-white/20 bg-transparent"
-                      }`}
-                      style={isChecked ? { backgroundColor: info.color } : undefined}
+                      className="w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all"
+                      style={isChecked ? {
+                        backgroundColor: info.color,
+                        borderColor: info.color,
+                      } : {
+                        borderColor: "rgba(255,255,255,0.2)",
+                        backgroundColor: "transparent",
+                      }}
                     >
-                      {isChecked && <Check size={12} className="text-[#071115]" />}
+                      {isChecked && <Check size={12} className="text-[#071115]" strokeWidth={3} />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
@@ -864,7 +865,7 @@ export function GlassNewMissionModal({
               })}
             </div>
             {selectedDeployHosts.size > 0 && (
-              <div className="p-3 bg-[#00E676]/5 border border-[#00E676]/15 rounded-xl">
+              <div className="p-3 rounded-xl" style={{ backgroundColor: "rgba(0,230,118,0.06)", borderColor: "rgba(0,230,118,0.2)", borderWidth: 1 }}>
                 <p className="text-[10px] text-[#00E676] font-mono leading-relaxed">
                   Jules will include deployment config files for: {Array.from(selectedDeployHosts).map(h => DEPLOY_HOSTS[h].name).join(", ")}
                 </p>
