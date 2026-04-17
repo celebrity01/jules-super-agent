@@ -82,7 +82,7 @@ interface GitHubRepoItem {
   default_branch?: string;
 }
 
-type DeployStep = "select-provider" | "api-key" | "select-item" | "confirm" | "deploying" | "result";
+type DeployStep = "select-provider" | "api-key" | "select-item" | "select-branch" | "confirm" | "deploying" | "result";
 type ItemTab = "host-projects" | "github-repos";
 
 interface GlassDeployNotificationProps {
@@ -133,6 +133,13 @@ export function GlassDeployNotification({
   const [isLoadingRepos, setIsLoadingRepos] = useState(false);
   const [reposError, setReposError] = useState<string | null>(null);
   const [repoSearch, setRepoSearch] = useState("");
+
+  // Branch selection state
+  const [branches, setBranches] = useState<{ name: string; commit_sha: string; protected: boolean }[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
+  const [isLoadingBranches, setIsLoadingBranches] = useState(false);
+  const [branchesError, setBranchesError] = useState<string | null>(null);
+  const [branchSearch, setBranchSearch] = useState("");
 
   const notificationRef = useRef<HTMLDivElement>(null);
 
@@ -194,6 +201,10 @@ export function GlassDeployNotification({
       setGithubRepos([]);
       setRepoSearch("");
       setReposError(null);
+      setBranches([]);
+      setSelectedBranch(null);
+      setBranchesError(null);
+      setBranchSearch("");
     }
   }, [open]);
 
@@ -366,13 +377,49 @@ export function GlassDeployNotification({
     setSelectedItem(itemId);
     setSelectedItemType("host");
     setSelectedGithubRepo(null);
+    setSelectedBranch(null);
     setStep("confirm");
   };
+
+  // Fetch branches for a GitHub repo
+  const fetchBranches = useCallback(async (owner: string, repo: string) => {
+    if (!githubToken) return;
+    setIsLoadingBranches(true);
+    setBranchesError(null);
+    setBranches([]);
+
+    try {
+      const res = await fetch(`/api/github/repos/${owner}/${repo}/branches`, {
+        headers: { "X-GitHub-Token": sanitizeHeaderValue(githubToken) },
+      });
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch {
+        throw new Error(`Invalid JSON from GitHub branches API (${res.status})`);
+      }
+      if (!res.ok) {
+        throw new Error(data.error || data.message || `Failed to fetch branches (${res.status})`);
+      }
+      const branchList = (Array.isArray(data) ? data : []) as { name: string; commit_sha: string; protected: boolean }[];
+      setBranches(branchList);
+    } catch (err) {
+      setBranchesError(err instanceof Error ? err.message : "Failed to fetch branches");
+    } finally {
+      setIsLoadingBranches(false);
+    }
+  }, [githubToken]);
 
   const handleGithubRepoSelect = (repo: GitHubRepoItem) => {
     setSelectedItem(repo.full_name);
     setSelectedItemType("github");
     setSelectedGithubRepo(repo);
+    setSelectedBranch(repo.default_branch || "main");
+    fetchBranches(repo.owner, repo.name);
+    setStep("select-branch");
+  };
+
+  const handleBranchSelect = (branch: string) => {
+    setSelectedBranch(branch);
     setStep("confirm");
   };
 
@@ -385,6 +432,7 @@ export function GlassDeployNotification({
       const headerName = PROVIDERS[selectedProvider].tokenHeader;
       const cleanToken = sanitizeHeaderValue(savedToken);
       let res: Response;
+      const deployBranch = selectedBranch || selectedGithubRepo?.default_branch || "main";
 
       if (selectedItemType === "github" && selectedGithubRepo) {
         // Deploy from GitHub repo — create a new project/site/service linked to the repo
@@ -399,7 +447,7 @@ export function GlassDeployNotification({
               name: repo.name,
               repoOwner: repo.owner,
               repoName: repo.name,
-              branch: repo.default_branch || "main",
+              branch: deployBranch,
             }),
           });
         } else if (selectedProvider === "netlify") {
@@ -411,7 +459,7 @@ export function GlassDeployNotification({
               name: repo.name,
               repoOwner: repo.owner,
               repoName: repo.name,
-              branch: repo.default_branch || "main",
+              branch: deployBranch,
               repoUrl: repo.html_url,
             }),
           });
@@ -424,7 +472,7 @@ export function GlassDeployNotification({
               name: repo.name,
               repoOwner: repo.owner,
               repoName: repo.name,
-              branch: repo.default_branch || "main",
+              branch: deployBranch,
             }),
           });
         }
@@ -436,13 +484,13 @@ export function GlassDeployNotification({
           res = await fetch("/api/vercel/deploy", {
             method: "POST",
             headers: { "Content-Type": "application/json", [headerName]: cleanToken },
-            body: JSON.stringify({ projectId: selectedItem }),
+            body: JSON.stringify({ projectId: selectedItem, branch: deployBranch }),
           });
         } else if (selectedProvider === "netlify") {
           res = await fetch("/api/netlify/deploy", {
             method: "POST",
             headers: { "Content-Type": "application/json", [headerName]: cleanToken },
-            body: JSON.stringify({ siteId: selectedItem, title: item?.name }),
+            body: JSON.stringify({ siteId: selectedItem, title: item?.name, branch: deployBranch }),
           });
         } else {
           res = await fetch("/api/render/deploy", {
@@ -527,10 +575,10 @@ export function GlassDeployNotification({
             </div>
             <div>
               <h2 className="text-[#E0F7FA] font-bold text-lg tracking-tight leading-none">
-                {step === "select-provider" ? "Deploy" : step === "api-key" ? `Connect ${provider?.name}` : step === "confirm" ? "Confirm Deploy" : step === "deploying" ? "Deploying..." : step === "result" ? deployResult?.success ? "Deploy Triggered!" : "Deploy Failed" : "Select Source"}
+                {step === "select-provider" ? "Deploy" : step === "api-key" ? `Connect ${provider?.name}` : step === "select-branch" ? "Select Branch" : step === "confirm" ? "Confirm Deploy" : step === "deploying" ? "Deploying..." : step === "result" ? deployResult?.success ? "Deploy Triggered!" : "Deploy Failed" : "Select Source"}
               </h2>
               <p className="text-[#547B88] text-[10px] font-mono uppercase tracking-widest mt-0.5">
-                {step === "select-provider" ? "Choose deployment host" : step === "api-key" ? "API access required" : step === "confirm" ? "Review before deploying" : step === "result" ? "Deployment status" : `${provider?.name} project or GitHub repo`}
+                {step === "select-provider" ? "Choose deployment host" : step === "api-key" ? "API access required" : step === "select-branch" ? `Pick a branch from ${selectedGithubRepo?.name || "repo"}` : step === "confirm" ? "Review before deploying" : step === "result" ? "Deployment status" : `${provider?.name} project or GitHub repo`}
               </p>
             </div>
           </div>
@@ -861,6 +909,149 @@ export function GlassDeployNotification({
             </div>
           )}
 
+          {/* Step: Select Branch */}
+          {step === "select-branch" && provider && selectedGithubRepo && (
+            <div className="space-y-3">
+              {/* Selected repo indicator */}
+              <div className="flex items-center gap-3 p-3 bg-white/[0.02] border border-white/5 rounded-xl">
+                <div className="w-8 h-8 flex items-center justify-center rounded-lg shrink-0 bg-[#E0F7FA]/10 text-[#E0F7FA]">
+                  <Github size={14} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-mono truncate text-[#E0F7FA]">{selectedGithubRepo.full_name}</p>
+                  <p className="text-[10px] text-[#547B88] font-mono">Select a branch to deploy</p>
+                </div>
+              </div>
+
+              {/* Search branches */}
+              <div className="bg-white/5 border border-white/10 rounded-xl flex items-center px-3 py-2.5">
+                <Search size={14} className="text-[#547B88] mr-2 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Filter branches..."
+                  value={branchSearch}
+                  onChange={(e) => setBranchSearch(e.target.value)}
+                  className="bg-transparent border-none outline-none w-full text-sm text-[#E0F7FA] placeholder-[#1A3540] font-mono"
+                />
+              </div>
+
+              {/* Branches list */}
+              {isLoadingBranches ? (
+                <div className="text-center py-8">
+                  <Loader2 size={24} style={{ color: provider.color }} className="mx-auto mb-2 animate-spin" />
+                  <p className="text-xs text-[#547B88]">Loading branches...</p>
+                </div>
+              ) : branchesError ? (
+                <div className="text-center py-6">
+                  <AlertCircle size={24} className="text-[#FF2A5F] mx-auto mb-2" />
+                  <p className="text-xs text-[#FF2A5F]">{branchesError}</p>
+                  <button
+                    onClick={() => fetchBranches(selectedGithubRepo.owner, selectedGithubRepo.name)}
+                    className="mt-2 text-xs font-bold hover:underline"
+                    style={{ color: provider.color }}
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : (() => {
+                const filteredBranches = branches.filter((b) =>
+                  !branchSearch || b.name.toLowerCase().includes(branchSearch.toLowerCase())
+                );
+                const defaultBranch = selectedGithubRepo.default_branch || "main";
+                return filteredBranches.length === 0 ? (
+                  <div className="text-center py-6">
+                    <p className="text-xs text-[#547B88]">
+                      {branchSearch ? `No branches matching "${branchSearch}"` : "No branches found"}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-[30vh] overflow-y-auto">
+                    {filteredBranches.map((branch) => {
+                      const isDefault = branch.name === defaultBranch;
+                      const isSelected = branch.name === selectedBranch;
+                      return (
+                        <button
+                          key={branch.name}
+                          onClick={() => handleBranchSelect(branch.name)}
+                          className={`w-full flex items-center gap-3 px-4 py-3 bg-white/[0.02] border rounded-xl text-left transition-all active:scale-[0.98] ${
+                            isSelected ? "border-[#00E5FF]/40 bg-[#00E5FF]/5" : "border-white/5 hover:bg-white/5"
+                          }`}
+                        >
+                          <div className={`w-8 h-8 flex items-center justify-center rounded-lg shrink-0 ${
+                            isDefault ? "bg-[#00E5FF]/10 text-[#00E5FF]" : "bg-[#B388FF]/10 text-[#B388FF]"
+                          }`}>
+                            <GitBranch size={14} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-mono truncate ${
+                              isSelected ? "text-[#00E5FF]" : "text-[#E0F7FA]"
+                            }`}>
+                              {branch.name}
+                            </p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              {isDefault && (
+                                <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-[#00E5FF]/10 text-[#00E5FF] border border-[#00E5FF]/20 uppercase">
+                                  Default
+                                </span>
+                              )}
+                              {branch.protected && (
+                                <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-[#FF2A5F]/10 text-[#FF2A5F] border border-[#FF2A5F]/20 uppercase">
+                                  Protected
+                                </span>
+                              )}
+                              {branch.commit_sha && (
+                                <span className="text-[10px] text-[#547B88] font-mono">{branch.commit_sha}</span>
+                              )}
+                            </div>
+                          </div>
+                          {isSelected && (
+                            <CheckCircle2 size={16} className="text-[#00E5FF] shrink-0" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+
+              {/* Branch count */}
+              {branches.length > 0 && (
+                <p className="text-[10px] text-[#547B88] font-mono text-center opacity-40">
+                  {branches.filter((b) => !branchSearch || b.name.toLowerCase().includes(branchSearch.toLowerCase())).length} of {branches.length} branches
+                </p>
+              )}
+
+              {/* Use default branch button */}
+              {selectedBranch && selectedBranch !== (selectedGithubRepo.default_branch || "main") && (
+                <button
+                  onClick={() => setSelectedBranch(selectedGithubRepo.default_branch || "main")}
+                  className="w-full py-2.5 text-xs font-bold text-[#00E5FF] bg-[#00E5FF]/5 border border-[#00E5FF]/20 rounded-xl hover:bg-[#00E5FF]/10 transition-all flex items-center justify-center gap-1.5"
+                >
+                  <GitBranch size={12} /> Use default branch ({selectedGithubRepo.default_branch || "main"})
+                </button>
+              )}
+
+              {/* Continue with selected branch */}
+              <button
+                onClick={() => setStep("confirm")}
+                disabled={!selectedBranch}
+                className="w-full py-3.5 text-sm font-bold active:scale-95 transition-all rounded-xl flex items-center justify-center gap-2 shadow-lg disabled:opacity-40"
+                style={{ backgroundColor: provider.color, color: "#071115", boxShadow: `0 4px 15px ${provider.color}33` }}
+              >
+                <GitBranch size={16} />
+                Continue with {selectedBranch || "branch"}
+              </button>
+
+              {/* Back */}
+              <button
+                onClick={() => { setStep("select-item"); setSelectedBranch(null); setBranches([]); setBranchSearch(""); }}
+                className="w-full py-2 text-xs text-[#547B88] font-mono uppercase tracking-widest hover:text-[#E0F7FA] transition-all"
+              >
+                Back to repo selection
+              </button>
+            </div>
+          )}
+
           {/* Step: Confirm Deploy */}
           {step === "confirm" && provider && selectedItem && (
             <div className="space-y-4">
@@ -889,9 +1080,13 @@ export function GlassDeployNotification({
                     {selectedGithubRepo.private && (
                       <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-[#FF2A5F]/10 text-[#FF2A5F] border border-[#FF2A5F]/20 uppercase">Private</span>
                     )}
-                    <span className="text-[10px] text-[#547B88] font-mono flex items-center gap-0.5">
-                      <GitBranch size={8} /> {selectedGithubRepo.default_branch || "main"}
-                    </span>
+                    <button
+                      onClick={() => setStep("select-branch")}
+                      className="text-[10px] text-[#00E5FF] font-mono flex items-center gap-0.5 hover:underline"
+                    >
+                      <GitBranch size={8} /> {selectedBranch || selectedGithubRepo.default_branch || "main"}
+                      <span className="text-[8px] ml-1 opacity-60">(change)</span>
+                    </button>
                   </div>
                 )}
                 {selectedItemType === "host" && items.find((i) => i.id === selectedItem)?.url && (
@@ -899,13 +1094,27 @@ export function GlassDeployNotification({
                     {items.find((i) => i.id === selectedItem)?.url}
                   </p>
                 )}
+                {selectedItemType === "host" && (
+                  <div className="pl-15 pt-1">
+                    <label className="text-[10px] font-mono text-[#547B88] uppercase font-bold tracking-[0.2em] mb-1 block">
+                      Deploy Branch (optional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Leave empty for default branch"
+                      value={selectedBranch || ""}
+                      onChange={(e) => setSelectedBranch(e.target.value || null)}
+                      className="w-full bg-white/5 border border-white/10 px-3 py-2 text-xs rounded-lg outline-none text-[#E0F7FA] placeholder-[#1A3540] focus:border-[#00E5FF]/40 transition-all font-mono"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="rounded-xl bg-[#B388FF]/5 border border-[#B388FF]/15 px-4 py-3 flex items-start gap-3">
                 <ShieldCheck size={16} className="text-[#B388FF] shrink-0 mt-0.5" />
                 <p className="text-xs text-[#547B88] leading-relaxed">
                   {selectedItemType === "github"
-                    ? <>Are you sure you want to create a new <span className="font-bold" style={{ color: provider.color }}>{provider.name}</span> project and deploy from <span className="font-bold text-[#E0F7FA]">{confirmDisplayName}</span>? This will link your GitHub repo and trigger the first build.</>
+                    ? <>Are you sure you want to create a new <span className="font-bold" style={{ color: provider.color }}>{provider.name}</span> project and deploy from <span className="font-bold text-[#E0F7FA]">{confirmDisplayName}</span> on branch <span className="font-bold text-[#00E5FF]">{selectedBranch || selectedGithubRepo?.default_branch || "main"}</span>? This will link your GitHub repo and trigger the first build.</>
                     : <>Are you sure you want to trigger a deployment to <span className="font-bold" style={{ color: provider.color }}>{provider.name}</span>? This will start a new build and deploy process.</>
                   }
                 </p>
@@ -948,6 +1157,11 @@ export function GlassDeployNotification({
                 <p className="text-[10px] text-[#547B88] font-mono mt-1">
                   {confirmDisplayName}
                 </p>
+                {selectedBranch && (
+                  <p className="text-[10px] text-[#00E5FF] font-mono mt-0.5 flex items-center justify-center gap-1">
+                    <GitBranch size={8} /> {selectedBranch}
+                  </p>
+                )}
               </div>
               <Loader2 size={28} style={{ color: provider.color }} className="animate-spin" />
             </div>
