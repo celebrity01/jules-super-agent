@@ -136,6 +136,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           ...enableData,
+          pagesUrl: enableData.html_url || `https://${repoOwner}.github.io/${repoName}/`,
           status: "pages_enabled",
           message: `GitHub Pages enabled for ${repoOwner}/${repoName} on branch ${branch || "main"}`,
         },

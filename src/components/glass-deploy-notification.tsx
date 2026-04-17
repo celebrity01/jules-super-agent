@@ -135,7 +135,7 @@ export function GlassDeployNotification({
   const [isLoadingItems, setIsLoadingItems] = useState(false);
   const [itemsError, setItemsError] = useState<string | null>(null);
   const [isDeploying, setIsDeploying] = useState(false);
-  const [deployResult, setDeployResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [deployResult, setDeployResult] = useState<{ success: boolean; message: string; url?: string } | null>(null);
 
   // Item tab state
   const [itemTab, setItemTab] = useState<ItemTab>("host-projects");
@@ -560,15 +560,34 @@ export function GlassDeployNotification({
         ? selectedGithubRepo?.full_name || selectedItem
         : items.find((i) => i.id === selectedItem)?.name || selectedItem;
 
+      // Extract deploy URL from response if available
+      let deployUrl: string | undefined;
+      if (selectedProvider === "github-pages") {
+        // GitHub Pages API returns pagesUrl in the response
+        deployUrl = data.pagesUrl || data.html_url;
+        if (!deployUrl && selectedGithubRepo) {
+          // Fallback: construct the URL from repo owner/name
+          deployUrl = `https://${selectedGithubRepo.owner}.github.io/${selectedGithubRepo.name}/`;
+        }
+        if (!deployUrl && selectedItem) {
+          const [owner, name] = selectedItem.split("/");
+          if (owner && name) deployUrl = `https://${owner}.github.io/${name}/`;
+        }
+      } else if (selectedItemType === "host") {
+        // For host redeploy, use the URL from the items list
+        deployUrl = items.find((i) => i.id === selectedItem)?.url;
+      }
+
       setDeployResult({
         success: true,
         message: selectedItemType === "github"
           ? `Created ${PROVIDERS[selectedProvider!].name} project and deployed from ${displayName}`
           : `Deploy triggered on ${displayName} via ${PROVIDERS[selectedProvider!].name}`,
+        url: deployUrl,
       });
       setStep("result");
 
-      onSendMessage?.(`Deployment triggered on ${PROVIDERS[selectedProvider!].name} for ${displayName}. The build is now in progress.`);
+      onSendMessage?.(`Deployment triggered on ${PROVIDERS[selectedProvider!].name} for ${displayName}. The build is now in progress.${deployUrl ? ` Your site will be available at: ${deployUrl}` : ""}`);
     } catch (err) {
       setDeployResult({
         success: false,
@@ -1236,6 +1255,44 @@ export function GlassDeployNotification({
                   <p className="text-[10px] text-[#547B88] font-mono mt-1">{deployResult.message}</p>
                 </div>
               </div>
+
+              {/* Deploy URL - clickable link to the deployed site */}
+              {deployResult.success && deployResult.url && (
+                <a
+                  href={deployResult.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-4 bg-white/[0.02] border border-white/10 hover:bg-white/5 rounded-xl transition-all group"
+                >
+                  <div
+                    className="w-10 h-10 flex items-center justify-center rounded-xl shrink-0"
+                    style={{ backgroundColor: `${provider.color}15`, color: provider.color }}
+                  >
+                    {selectedProvider === "github-pages" ? <Globe size={18} /> : <ExternalLink size={18} />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-mono text-[#547B88] uppercase font-bold tracking-[0.15em]">
+                      {selectedProvider === "github-pages" ? "GitHub Pages URL" : "Site URL"}
+                    </p>
+                    <p className="text-sm font-mono truncate group-hover:underline" style={{ color: provider.color }}>
+                      {deployResult.url}
+                    </p>
+                  </div>
+                  <ExternalLink size={14} className="text-[#547B88] group-hover:text-[#E0F7FA] shrink-0 transition-colors" />
+                </a>
+              )}
+
+              {/* Note for GitHub Pages about build time */}
+              {deployResult.success && selectedProvider === "github-pages" && (
+                <div className="rounded-xl bg-[#B8A9E8]/5 border border-[#B8A9E8]/15 px-4 py-3 flex items-start gap-3">
+                  <Globe size={16} className="text-[#B8A9E8] shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-[#547B88] leading-relaxed">
+                      GitHub Pages builds typically take 1-3 minutes. Your site will be live at the URL above once the build completes. You can check the deployment status in your repository&apos;s Actions tab.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <button
                 onClick={onClose}
