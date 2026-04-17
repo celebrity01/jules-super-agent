@@ -17,6 +17,7 @@ import {
   Lock,
   Star,
   AlertCircle,
+  Upload,
 } from "lucide-react";
 import {
   JulesSource,
@@ -35,6 +36,134 @@ interface GlassNewMissionModalProps {
   githubToken?: string;
   onSessionCreated: (sessionId: string) => void;
   onAddRepo?: () => void;
+}
+
+/** Deployment host types matching the deploy wizard */
+type DeployHost = "vercel" | "netlify" | "render" | "github-pages";
+
+/** Info for each deployment host */
+interface DeployHostInfo {
+  name: string;
+  color: string;
+  description: string;
+  icon: "rocket" | "globe";
+}
+
+const DEPLOY_HOSTS: Record<DeployHost, DeployHostInfo> = {
+  vercel: {
+    name: "Vercel",
+    color: "#E0F7FA",
+    description: "vercel.json + framework detection",
+    icon: "rocket",
+  },
+  netlify: {
+    name: "Netlify",
+    color: "#30C8C9",
+    description: "netlify.toml + build config",
+    icon: "rocket",
+  },
+  render: {
+    name: "Render",
+    color: "#46E3B7",
+    description: "render.yaml blueprint",
+    icon: "rocket",
+  },
+  "github-pages": {
+    name: "GitHub Pages",
+    color: "#B8A9E8",
+    description: ".github/workflows/deploy.yml",
+    icon: "globe",
+  },
+};
+
+/**
+ * Build deployment config instructions to append to the Jules prompt.
+ * When a user checks a host, Jules is instructed to include the appropriate
+ * deployment workflow/config files in the generated code so that one-tap
+ * deployment from the Jules Super Agent UI works immediately.
+ */
+function buildDeployInstructions(hosts: Set<DeployHost>): string {
+  if (hosts.size === 0) return "";
+
+  const lines: string[] = [
+    "",
+    "CRITICAL REQUIREMENT: You must include deployment configuration files to enable one-tap hosting on the following platforms.",
+    "",
+  ];
+
+  if (hosts.has("github-pages")) {
+    lines.push(
+      "GITHUB PAGES DEPLOYMENT:",
+      "Include a GitHub Actions deployment workflow file.",
+      "File Path: .github/workflows/deploy.yml",
+      "File Content Requirements:",
+      "  - Triggers: Include both push (to main branch) and workflow_dispatch (so manual button can trigger it).",
+      "  - Permissions: Must have pages: write, contents: read, and id-token: write.",
+      "  - Steps:",
+      "    1. Checkout the repository.",
+      "    2. Setup GitHub Pages.",
+      "    3. Upload the artifact (use path . for static sites).",
+      "    4. Deploy to GitHub Pages.",
+      "  - Use actions/deploy-pages@v4 for deployment.",
+      "  - Use actions/upload-pages-artifact@v3 for artifact upload.",
+      "  - Use actions/configure-pages@v5 for Pages setup.",
+      "  - Set the workflow to use the GitHub Pages environment.",
+      "",
+    );
+  }
+
+  if (hosts.has("vercel")) {
+    lines.push(
+      "VERCEL DEPLOYMENT:",
+      "Include a vercel.json configuration file in the project root.",
+      "File Path: vercel.json",
+      "File Content Requirements:",
+      "  - Set the framework preset based on the project type (e.g., nextjs, react, etc.).",
+      "  - Configure buildCommand and outputDirectory appropriately.",
+      "  - Include installCommand if a specific package manager is needed (e.g., npm, yarn, bun).",
+      "  - Add any necessary rewrites or redirects for single-page applications.",
+      "  - Ensure the project can be deployed by connecting the GitHub repo to Vercel.",
+      "",
+    );
+  }
+
+  if (hosts.has("netlify")) {
+    lines.push(
+      "NETLIFY DEPLOYMENT:",
+      "Include a netlify.toml configuration file in the project root.",
+      "File Path: netlify.toml",
+      "File Content Requirements:",
+      "  - Set the build command (e.g., npm run build, yarn build, bun run build).",
+      "  - Set the publish directory (e.g., dist, out, .next/static).",
+"  - Configure the Node.js version if needed via [build.environment].",
+      "  - Add necessary redirects for single-page applications in [[redirects]] section.",
+      "  - Ensure the project can be deployed by connecting the GitHub repo to Netlify.",
+      "",
+    );
+  }
+
+  if (hosts.has("render")) {
+    lines.push(
+      "RENDER DEPLOYMENT:",
+      "Include a render.yaml blueprint file.",
+ "File Path: render.yaml",
+      "File Content Requirements:",
+      "  - Define a web service (type: web).",
+      "  - Set the runtime (e.g., Node).",
+      "  - Set the build command (e.g., npm install && npm run build).",
+      "  - Set the start command (e.g., npm start, npm run start).",
+      "  - Set the plan (e.g., free or starter).",
+      "  - Configure envVars if needed (e.g., NODE_ENV=production).",
+      "  - Reference the GitHub repo for auto-deploy on push.",
+      "",
+    );
+  }
+
+  lines.push(
+    "IMPORTANT: These deployment files must be functional and ready to use. The user should be able to deploy to any checked platform with a single click from the Jules Super Agent deploy menu after the code is generated.",
+  );
+
+  return lines.join("\n");
 }
 
 /** Represents a unified repo item for the dropdown */
@@ -92,6 +221,9 @@ export function GlassNewMissionModal({
   const [branchDropdownOpen, setBranchDropdownOpen] = useState(false);
   const [branchSearch, setBranchSearch] = useState("");
   const branchDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Deployment host selection state
+  const [selectedDeployHosts, setSelectedDeployHosts] = useState<Set<DeployHost>>(new Set());
 
   // Fetch GitHub repos when dropdown opens
   const fetchGithubRepos = useCallback(async () => {
@@ -247,6 +379,18 @@ export function GlassNewMissionModal({
     }
   };
 
+  const toggleDeployHost = (host: DeployHost) => {
+    setSelectedDeployHosts((prev) => {
+      const next = new Set(prev);
+      if (next.has(host)) {
+        next.delete(host);
+      } else {
+        next.add(host);
+      }
+      return next;
+    });
+  };
+
   const handleCreate = async () => {
     if (!prompt.trim()) { setError("Objective is required"); return; }
     if (!selectedSource) { setError("Select a repository"); return; }
@@ -256,8 +400,12 @@ export function GlassNewMissionModal({
 
     try {
       const { createSession } = await import("@/lib/jules-client");
+      // Append deployment config instructions if any hosts are selected
+      const deployInstructions = buildDeployInstructions(selectedDeployHosts);
+      const fullPrompt = prompt.trim() + deployInstructions;
+
       const session = await createSession(apiKey, {
-        prompt: prompt.trim(),
+        prompt: fullPrompt,
         title: title.trim() || undefined,
         sourceContext: {
           source: selectedSource,
@@ -281,6 +429,7 @@ export function GlassNewMissionModal({
     setBranch("main"); setAutomationMode("none"); setRequireApproval(true);
     setError(null); setDropdownOpen(false); setSearchFilter("");
     setBranches([]); setBranchesError(null); setBranchDropdownOpen(false); setBranchSearch("");
+    setSelectedDeployHosts(new Set());
     onClose();
   };
 
@@ -651,6 +800,76 @@ export function GlassNewMissionModal({
                 <span className="text-[11px] font-bold mt-1">Auto PR</span>
               </button>
             </div>
+          </div>
+
+          {/* Deployment Config */}
+          <div className="space-y-3">
+            <label className="text-[10px] font-mono text-[#547B88] uppercase font-bold tracking-[0.2em] ml-1 flex items-center gap-1.5">
+              <Upload size={12} /> Deployment Config
+            </label>
+            <p className="text-[10px] text-[#547B88] ml-1 leading-relaxed">
+              Select platforms to include deployment config files. Jules will generate workflow/config files so you can deploy with one tap.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {(["vercel", "netlify", "render", "github-pages"] as DeployHost[]).map((host) => {
+                const info = DEPLOY_HOSTS[host];
+                const isChecked = selectedDeployHosts.has(host);
+                return (
+                  <button
+                    key={host}
+                    type="button"
+                    onClick={() => toggleDeployHost(host)}
+                    disabled={isLoading}
+                    className={`flex items-center gap-3 p-3 rounded-2xl border transition-all text-left disabled:opacity-50 ${
+                      isChecked
+                        ? `border-[${info.color}]/30 bg-[${info.color}]/10`
+                        : "bg-white/5 border-white/10 hover:border-white/20"
+                    }`}
+                    style={isChecked ? {
+                      borderColor: `${info.color}50`,
+                      backgroundColor: `${info.color}10`,
+                    } : undefined}
+                  >
+                    {/* Custom checkbox */}
+                    <div
+                      className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${
+                        isChecked
+                          ? "border-transparent"
+                          : "border-white/20 bg-transparent"
+                      }`}
+                      style={isChecked ? { backgroundColor: info.color } : undefined}
+                    >
+                      {isChecked && <Check size={12} className="text-[#071115]" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        {info.icon === "globe" ? (
+                          <Globe size={11} style={{ color: isChecked ? info.color : "#547B88" }} className="shrink-0" />
+                        ) : (
+                          <Rocket size={11} style={{ color: isChecked ? info.color : "#547B88" }} className="shrink-0" />
+                        )}
+                        <span
+                          className="text-[11px] font-bold truncate"
+                          style={{ color: isChecked ? info.color : "#547B88" }}
+                        >
+                          {info.name}
+                        </span>
+                      </div>
+                      <p className="text-[9px] text-[#547B88] font-mono truncate mt-0.5">
+                        {info.description}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            {selectedDeployHosts.size > 0 && (
+              <div className="p-3 bg-[#00E676]/5 border border-[#00E676]/15 rounded-xl">
+                <p className="text-[10px] text-[#00E676] font-mono leading-relaxed">
+                  Jules will include deployment config files for: {Array.from(selectedDeployHosts).map(h => DEPLOY_HOSTS[h].name).join(", ")}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Approval Toggle */}
